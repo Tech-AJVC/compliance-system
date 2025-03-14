@@ -33,7 +33,7 @@ class ComplianceTask(Base):
     approver_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
-    
+
     # Relationships
     assignee = relationship("User", foreign_keys=[assignee_id])
     reviewer = relationship("User", foreign_keys=[reviewer_id])

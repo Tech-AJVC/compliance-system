@@ -6,10 +6,12 @@ import uuid
 from datetime import datetime
 import enum
 
+
 class DocumentStatus(str, enum.Enum):
     ACTIVE = "Active"
     PENDING_APPROVAL = "Pending Approval"
     EXPIRED = "Expired"
+
 
 class DocumentCategory(str, enum.Enum):
     CONTRIBUTION_AGREEMENT = "Contribution Agreement"
@@ -17,6 +19,7 @@ class DocumentCategory(str, enum.Enum):
     NOTIFICATION = "Notification"
     REPORT = "Report"
     OTHER = "Other"
+
 
 class Document(Base):
     __tablename__ = "documents"
@@ -31,14 +34,14 @@ class Document(Base):
     file_path = Column(String, nullable=False)
     drive_file_id = Column(String, nullable=True)  # Google Drive file ID
     drive_link = Column(String, nullable=True)  # Common drive link for all users
-    
+
     # Legacy columns - will be removed in the future
     uploader_drive_link = Column(String, nullable=True)  # Drive link for uploader
     assignee_drive_link = Column(String, nullable=True)  # Drive link for task assignee
     reviewer_drive_link = Column(String, nullable=True)  # Drive link for task reviewer
     fund_manager_drive_link = Column(String, nullable=True)  # Drive link for fund manager
     approver_drive_link = Column(String, nullable=True)  # Drive link for task approver
-    
+
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
@@ -49,6 +52,7 @@ class Document(Base):
         super().__init__(**kwargs)
         if not self.document_id:
             self.document_id = uuid.uuid4()
+
 
 class TaskDocument(Base):
     __tablename__ = "task_documents"
