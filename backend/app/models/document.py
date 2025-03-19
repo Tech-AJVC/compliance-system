@@ -29,6 +29,16 @@ class Document(Base):
     expiry_date = Column(Date, nullable=True)
     process_id = Column(String, nullable=True)
     file_path = Column(String, nullable=False)
+    drive_file_id = Column(String, nullable=True)  # Google Drive file ID
+    drive_link = Column(String, nullable=True)  # Common drive link for all users
+    
+    # Legacy columns - will be removed in the future
+    uploader_drive_link = Column(String, nullable=True)  # Drive link for uploader
+    assignee_drive_link = Column(String, nullable=True)  # Drive link for task assignee
+    reviewer_drive_link = Column(String, nullable=True)  # Drive link for task reviewer
+    fund_manager_drive_link = Column(String, nullable=True)  # Drive link for fund manager
+    approver_drive_link = Column(String, nullable=True)  # Drive link for task approver
+    
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 

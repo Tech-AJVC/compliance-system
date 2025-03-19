@@ -15,6 +15,15 @@ class TaskCategory(str, Enum):
     RBI = "RBI"
     IT_GST = "IT/GST"
 
+class DocumentInfo(BaseModel):
+    document_id: UUID4
+    name: str
+    category: str
+    drive_link: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class ComplianceTaskBase(BaseModel):
     description: str
     deadline: datetime
@@ -44,6 +53,10 @@ class ComplianceTaskResponse(ComplianceTaskBase):
     state: TaskState
     created_at: datetime
     updated_at: datetime
+    assignee_name: Optional[str] = None  # Added assignee name field
+    reviewer_name: Optional[str] = None  # Added reviewer name field
+    approver_name: Optional[str] = None  # Added approver name field
+    documents: List[DocumentInfo] = []  # List of associated document info
 
     class Config:
         from_attributes = True

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List, Dict, Any, Optional
 from app.database.base import get_db
 from app.models.lp_details import LPDetails
@@ -12,7 +13,6 @@ from app.schemas.lp import (
 from app.auth.security import get_current_user, check_role
 from app.utils.audit import log_activity
 import uuid
-from sqlalchemy.exc import IntegrityError
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
@@ -75,6 +75,43 @@ async def get_all_lps(
     Get all LP records with pagination.
     """
     lps = db.query(LPDetails).offset(skip).limit(limit).all()
+    return lps
+
+@router.get("/search/", response_model=List[LPDetailsResponse])
+async def search_lps_by_name(
+    name: str = Query(..., description="Name to search for (case-insensitive partial match)"),
+    skip: int = Query(0, description="Number of records to skip for pagination"),
+    limit: int = Query(100, description="Maximum number of records to return"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Search for LP records by name using case-insensitive partial matching.
+    
+    - Search is performed using ILIKE for partial matches
+    - Results are paginated
+    - Requires authentication
+    """
+    # Check if user has appropriate role
+    check_role(["Fund Manager", "Compliance Officer", "Fund Admin"])
+    
+    # Search for LPs with name matching the search term (case-insensitive)
+    lps = db.query(LPDetails).filter(
+        LPDetails.lp_name.ilike(f"%{name}%")
+    ).offset(skip).limit(limit).all()
+    
+    # Create audit log for the search operation
+    try:
+        log_activity(
+            db=db, 
+            activity="lp_search", 
+            user_id=uuid.UUID(current_user.get("sub", "00000000-0000-0000-0000-000000000000")), 
+            details=f"Searched for LPs with name containing '{name}'"
+        )
+    except Exception as e:
+        print(f"Error logging activity: {str(e)}")
+        # Continue even if logging fails
+    
     return lps
 
 @router.get("/{lp_id}", response_model=LPWithDrawdowns)
