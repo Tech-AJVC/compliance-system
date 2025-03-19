@@ -36,13 +36,41 @@ class DocumentInDB(DocumentBase):
     document_id: UUID4
     file_path: str
     date_uploaded: datetime
+    drive_file_id: Optional[str] = None
+    drive_link: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
+    
+    # Legacy fields - will be removed in the future
+    uploader_drive_link: Optional[str] = None
+    assignee_drive_link: Optional[str] = None
+    reviewer_drive_link: Optional[str] = None
+    fund_manager_drive_link: Optional[str] = None
+    approver_drive_link: Optional[str] = None
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class Document(DocumentInDB):
+class Document(BaseModel):
+    """Clean document response without legacy drive link fields"""
+    document_id: UUID4
+    name: str
+    category: DocumentCategory
+    status: Optional[DocumentStatus] = None
+    expiry_date: Optional[date] = None
+    process_id: Optional[str] = None
+    file_path: str
+    date_uploaded: datetime
+    drive_file_id: Optional[str] = None
+    drive_link: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class DocumentUploadResponse(Document):
+    """Schema for document upload response"""
     pass
 
 class TaskDocumentCreate(BaseModel):
@@ -54,7 +82,7 @@ class TaskDocumentInDB(TaskDocumentCreate):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TaskDocument(TaskDocumentInDB):
     pass
