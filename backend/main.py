@@ -522,7 +522,7 @@ async def update_task(
     try:
         db.commit()
         db.refresh(db_task)
-        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification", f"A task has been updated: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {task.description}")
+        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification", f"A task has been updated: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {db_task.description}")
         return db_task
     except Exception as e:
         db.rollback()
