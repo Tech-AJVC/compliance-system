@@ -21,6 +21,9 @@ async def get_task_stats(
     - Total number of tasks
     - Number of completed tasks
     - Number of overdue tasks
+    - Number of open tasks
+    - Number of pending tasks
+    - Number of review required tasks
     """
     # Total tasks
     total_tasks = db.query(func.count(ComplianceTask.compliance_task_id)).scalar()
@@ -34,13 +37,30 @@ async def get_task_stats(
     now = datetime.utcnow()
     overdue_tasks = db.query(func.count(ComplianceTask.compliance_task_id)) \
         .filter(
-        ComplianceTask.deadline < now,
-        ComplianceTask.state != TaskState.COMPLETED.value
+        ComplianceTask.state == TaskState.OVERDUE.value,
     ) \
+        .scalar()
+
+    # Open tasks
+    open_tasks = db.query(func.count(ComplianceTask.compliance_task_id)) \
+        .filter(ComplianceTask.state == TaskState.OPEN.value) \
+        .scalar()
+
+    # Pending tasks
+    pending_tasks = db.query(func.count(ComplianceTask.compliance_task_id)) \
+        .filter(ComplianceTask.state == TaskState.PENDING.value) \
+        .scalar()
+
+    # Review required tasks
+    review_required_tasks = db.query(func.count(ComplianceTask.compliance_task_id)) \
+        .filter(ComplianceTask.state == TaskState.REVIEW_REQUIRED.value) \
         .scalar()
 
     return TaskStats(
         total_tasks=total_tasks,
         completed_tasks=completed_tasks,
-        overdue_tasks=overdue_tasks
+        overdue_tasks=overdue_tasks,
+        open_tasks=open_tasks,
+        pending_tasks=pending_tasks,
+        review_required_tasks=review_required_tasks
     )
