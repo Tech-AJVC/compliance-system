@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from enum import Enum
 
+
 class TaskState(str, Enum):
     OPEN = "Open"
     PENDING = "Pending"
@@ -10,19 +11,22 @@ class TaskState(str, Enum):
     COMPLETED = "Completed"
     OVERDUE = "Overdue"
 
+
 class TaskCategory(str, Enum):
     SEBI = "SEBI"
     RBI = "RBI"
     IT_GST = "IT/GST"
+
 
 class DocumentInfo(BaseModel):
     document_id: UUID4
     name: str
     category: str
     drive_link: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
+
 
 class ComplianceTaskBase(BaseModel):
     description: str
@@ -34,8 +38,10 @@ class ComplianceTaskBase(BaseModel):
     recurrence: Optional[str] = None
     dependent_task_id: Optional[UUID4] = None
 
+
 class ComplianceTaskCreate(ComplianceTaskBase):
     pass
+
 
 class ComplianceTaskUpdate(BaseModel):
     state: Optional[TaskState] = None
@@ -47,6 +53,7 @@ class ComplianceTaskUpdate(BaseModel):
     approver_id: Optional[UUID4] = None
     recurrence: Optional[str] = None
     dependent_task_id: Optional[UUID4] = None
+
 
 class ComplianceTaskResponse(ComplianceTaskBase):
     compliance_task_id: UUID4
@@ -61,10 +68,11 @@ class ComplianceTaskResponse(ComplianceTaskBase):
     class Config:
         from_attributes = True
 
+
 class ComplianceTaskList(BaseModel):
     """Response model for paginated task list"""
     tasks: List[ComplianceTaskResponse]
     total: int
-    
+
     class Config:
         from_attributes = True

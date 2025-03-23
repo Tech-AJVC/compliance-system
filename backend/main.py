@@ -6,8 +6,8 @@ from app.models.compliance_task import ComplianceTask, TaskState, TaskCategory
 from app.models.document import Document, TaskDocument
 from app.auth.security import get_password_hash, verify_password, create_access_token, get_current_user, check_role
 from app.schemas.compliance_task import (
-    ComplianceTaskCreate, 
-    ComplianceTaskResponse, 
+    ComplianceTaskCreate,
+    ComplianceTaskResponse,
     ComplianceTaskUpdate,
     TaskState,
     TaskCategory,
@@ -57,6 +57,7 @@ os.makedirs("uploads", exist_ok=True)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
+
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
@@ -64,6 +65,7 @@ class UserCreate(BaseModel):
     password: str
     mfa_enabled: bool = False
     phone: Optional[str] = None
+
 
 class UserResponse(BaseModel):
     user_id: uuid.UUID
@@ -76,9 +78,11 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class UserSearchResponse(BaseModel):
     UserId: uuid.UUID
@@ -90,9 +94,11 @@ class UserSearchResponse(BaseModel):
         from_attributes = True
         alias_generator = lambda field_name: field_name  # Keep field names as defined
 
+
 @app.get("/")
 async def read_root():
     return {"message": "Hello World"}
+
 
 @app.post("/users/", response_model=UserResponse)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -107,7 +113,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
         # Hash the password before storing
         hashed_password = get_password_hash(user.password)
-        
+
         # Validate role
         # Fund Manager, Compliance Officer, LP, Portfolio Company, Auditor, Legal Consultant, Fund Admin
         valid_roles = ["Fund Manager", "Compliance Officer", "LP", "Portfolio Company", "Auditor", "Legal Consultant"]
@@ -130,7 +136,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
         return db_user
-        
+
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -147,6 +153,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
             detail=f"Unexpected error: {str(e)}\nDetails: {error_details}"
         )
 
+
 @app.post("/api/auth/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -156,16 +163,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Log successful login
     log_activity(db, "login", user.user_id, f"User {user.email} logged in")
-    
+
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role}, 
+        data={"sub": user.email, "role": user.role},
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 @app.get("/api/users/me", response_model=UserResponse)
 async def read_users_me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -174,11 +182,12 @@ async def read_users_me(current_user: dict = Depends(get_current_user), db: Sess
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
 @app.get("/api/users/search", response_model=List[UserSearchResponse])
 async def search_users(
-    username: str,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        username: str,
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     """
     Search for users based on username using ILIKE match.
@@ -186,12 +195,12 @@ async def search_users(
     """
     # Check if current user has required permissions
     # Simple implementation: all authenticated users can search
-    
+
     # Perform the search with ILIKE to make it case-insensitive
     matching_users = db.query(User).filter(
         User.name.ilike(f"%{username}%")
     ).all()
-    
+
     # Log the search activity
     user = db.query(User).filter(User.email == current_user["sub"]).first()
     if user:
@@ -201,7 +210,7 @@ async def search_users(
             user.user_id,
             f"User search performed with query: {username}"
         )
-    
+
     # Map database fields to response schema fields
     results = []
     for user in matching_users:
@@ -211,8 +220,9 @@ async def search_users(
             "email": user.email,
             "role": user.role
         })
-    
+
     return results
+
 
 @app.get("/api/fund-manager/dashboard")
 async def fund_manager_dashboard(current_user: dict = Depends(check_role("Fund Manager"))):
@@ -221,13 +231,14 @@ async def fund_manager_dashboard(current_user: dict = Depends(check_role("Fund M
         "user": current_user["sub"]
     }
 
+
 # Compliance Tasks Endpoints
 
 @app.post("/api/tasks/", response_model=ComplianceTaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
-    task: ComplianceTaskCreate,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        task: ComplianceTaskCreate,
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     try:
         # Validate assignee exists
@@ -247,18 +258,18 @@ async def create_task(
         db.add(db_task)
         db.commit()
         db.refresh(db_task)
-        
+
         # Log task creation
         user_id = None
         if "sub" in current_user:
             user = db.query(User).filter(User.email == current_user["sub"]).first()
             if user:
                 user_id = user.user_id
-                
+
         log_activity(
-            db, 
-            "task_created", 
-            user_id, 
+            db,
+            "task_created",
+            user_id,
             f"Task created: {db_task.compliance_task_id} - {task.description}"
         )
 
@@ -267,9 +278,10 @@ async def create_task(
         # credentials = authenticate_user(user_id, credentials_file)
         # if not credentials:
         #     return {"error": "Authentication failed"}
-        
+
         # # print(f"Sending test email to: aviral@ajuniorvc.com")
-        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Created Notification", f"A new task has been created: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {task.description}")
+        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Created Notification",
+                         f"A new task has been created: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {task.description}")
         return db_task
 
     except HTTPException as he:
@@ -280,19 +292,20 @@ async def create_task(
             return {"error": "Authentication failed"}
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.get("/api/tasks/", response_model=ComplianceTaskList)
 async def get_tasks(
-    state: Optional[str] = None,
-    category: Optional[str] = None,
-    assignee_id: Optional[uuid.UUID] = None,
-    assignee_name: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    sort: Optional[str] = None,
-    skip: int = Query(0, description="Number of records to skip for pagination"),
-    limit: int = Query(100, description="Maximum number of records to return"),
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        state: Optional[str] = None,
+        category: Optional[str] = None,
+        assignee_id: Optional[uuid.UUID] = None,
+        assignee_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort: Optional[str] = None,
+        skip: int = Query(0, description="Number of records to skip for pagination"),
+        limit: int = Query(100, description="Maximum number of records to return"),
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     """
     Get tasks with optional filtering and sorting:
@@ -307,26 +320,24 @@ async def get_tasks(
     # Start with a query that joins ComplianceTask with User (for assignee filtering by name)
     # Select both ComplianceTask and User.name for the assignee
     query = db.query(ComplianceTask, User.name.label('assignee_name')).join(
-        User, 
+        User,
         ComplianceTask.assignee_id == User.user_id,
         isouter=True
     )
 
-
     # Apply filters
     if state:
         query = query.filter(ComplianceTask.state == state)
-    
+
     if category:
         query = query.filter(ComplianceTask.category == category)
-    
+
     if assignee_id:
         query = query.filter(ComplianceTask.assignee_id == assignee_id)
-        
+
     if assignee_name:
         query = query.filter(User.name.ilike(f"%{assignee_name}%"))
-    
-      
+
     # Filter by date range if provided
     if start_date:
         try:
@@ -334,20 +345,20 @@ async def get_tasks(
             query = query.filter(func.date(ComplianceTask.deadline) >= start)
         except ValueError:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Invalid start_date format. Use YYYY-MM-DD."
             )
-            
+
     if end_date:
         try:
             end = datetime.strptime(end_date, "%Y-%m-%d").date()
             query = query.filter(func.date(ComplianceTask.deadline) <= end)
         except ValueError:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Invalid end_date format. Use YYYY-MM-DD."
             )
-    
+
     # Sorting
     if sort:
         if sort == "deadline_asc":
@@ -356,23 +367,23 @@ async def get_tasks(
             query = query.order_by(ComplianceTask.deadline.desc())
         else:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Invalid sort parameter. Use 'deadline_asc' or 'deadline_desc'."
             )
-    
+
     # Get total count before pagination
     total = query.count()
-    
+
     # Apply pagination
     results = query.offset(skip).limit(limit).all()
-    
+
     # Process results to include assignee_name in each task
     tasks = []
     for task, assignee_name in results:
         # Convert SQLAlchemy model to dict and add assignee_name
         task_dict = task.__dict__.copy()
         task_dict['assignee_name'] = assignee_name
-        
+
         # Get reviewer name
         reviewer_name = None
         if task.reviewer_id:
@@ -380,7 +391,7 @@ async def get_tasks(
             if reviewer:
                 reviewer_name = reviewer.name
         task_dict['reviewer_name'] = reviewer_name
-        
+
         # Get approver name
         approver_name = None
         if task.approver_id:
@@ -388,19 +399,19 @@ async def get_tasks(
             if approver:
                 approver_name = approver.name
         task_dict['approver_name'] = approver_name
-        
+
         # Get associated documents with appropriate drive links
         task_documents = db.query(TaskDocument).filter(
             TaskDocument.compliance_task_id == task.compliance_task_id
         ).all()
-        
+
         # Get document details
         documents = []
         for task_doc in task_documents:
             document = db.query(Document).filter(
                 Document.document_id == task_doc.document_id
             ).first()
-            
+
             if document:
                 document_info = {
                     "document_id": document.document_id,
@@ -408,24 +419,25 @@ async def get_tasks(
                     "category": document.category,
                     "drive_link": document.drive_link  # Use the new common drive_link field
                 }
-                
+
                 # Legacy code for backward compatibility - can be removed once everything is migrated
                 if not document_info["drive_link"]:
                     # Determine which link to provide based on user role
                     user_email = current_user.get('email')
                     is_fund_manager = user_email == "aviral@ajuniorvc.com"
                 documents.append(document_info)
-        
+
         task_dict['documents'] = documents
         tasks.append(task_dict)
-    
+
     return {"tasks": tasks, "total": total}
+
 
 @app.get("/api/tasks/{task_id}", response_model=ComplianceTaskResponse)
 async def get_task(
-    task_id: uuid.UUID,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        task_id: uuid.UUID,
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     """
     Get details of a specific task by ID, including linked documents.
@@ -433,7 +445,7 @@ async def get_task(
     task = db.query(ComplianceTask).filter(ComplianceTask.compliance_task_id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     # Get assignee name
     assignee_name = None
     if task.assignee_id:
@@ -454,25 +466,25 @@ async def get_task(
         approver = db.query(User).filter(User.user_id == task.approver_id).first()
         if approver:
             approver_name = approver.name
-    
+
     # Create task dictionary with assignee_name
     task_dict = task.__dict__.copy()
     task_dict['assignee_name'] = assignee_name
     task_dict['reviewer_name'] = reviewer_name
     task_dict['approver_name'] = approver_name
-    
+
     # Get associated documents with appropriate drive links
     task_documents = db.query(TaskDocument).filter(
         TaskDocument.compliance_task_id == task.compliance_task_id
     ).all()
-    
+
     # Get document details
     documents = []
     for task_doc in task_documents:
         document = db.query(Document).filter(
             Document.document_id == task_doc.document_id
         ).first()
-        
+
         if document:
             document_info = {
                 "document_id": document.document_id,
@@ -480,25 +492,26 @@ async def get_task(
                 "category": document.category,
                 "drive_link": document.drive_link  # Use the new common drive_link field
             }
-            
+
             # Legacy code for backward compatibility - can be removed once everything is migrated
             if not document_info["drive_link"]:
                 # Determine which link to provide based on user role
                 user_email = current_user.get('email')
                 is_fund_manager = user_email == "aviral@ajuniorvc.com"
-            
+
             documents.append(document_info)
-    
+
     task_dict['documents'] = documents
-    
+
     return task_dict
+
 
 @app.patch("/api/tasks/{task_id}", response_model=ComplianceTaskResponse)
 async def update_task(
-    task_id: uuid.UUID,
-    task_update: ComplianceTaskUpdate,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        task_id: uuid.UUID,
+        task_update: ComplianceTaskUpdate,
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     db_task = db.query(ComplianceTask).filter(ComplianceTask.compliance_task_id == task_id).first()
     if not db_task:
@@ -522,7 +535,8 @@ async def update_task(
     try:
         db.commit()
         db.refresh(db_task)
-        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification", f"A task has been updated: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {db_task.description}")
+        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification",
+                         f"A task has been updated: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {db_task.description}")
         return db_task
     except Exception as e:
         db.rollback()
