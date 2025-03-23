@@ -35,7 +35,7 @@ SCOPES = [
 ]
 
 
-GOOGLE_APPLICATION_CREDENTIALS = '/app/app/utils/neat-height-449308-h8-2a37363e5a04.json'
+GOOGLE_APPLICATION_CREDENTIALS = '/app/app/utils/neat-height-449308-h8-2a37363e5a04.json' 
 
 
 def get_credentials(subject_email: str = None):
