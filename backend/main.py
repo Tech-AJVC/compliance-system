@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Form, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Security
 from sqlalchemy.orm import Session
 from app.database.base import get_db
 from app.models.user import User
@@ -20,19 +20,26 @@ from app.api.compliance import router as compliance_router
 from app.api.audit import router as audit_router
 from app.utils.audit import log_activity
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import uuid
 from datetime import timedelta, datetime
 from sqlalchemy.exc import IntegrityError
 import traceback
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer, HTTPBasic, HTTPBasicCredentials
 import os
+import secrets
 from app.utils.google_clients_gcp import gmail_send_email
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
 import config
 from sqlalchemy import func
 
-app = FastAPI()
+# Get authentication credentials from config
+DOCS_USERNAME = "abhi7"
+DOCS_PASSWORD = "comp$135!" 
+
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Configure CORS using settings from config.py
 app.add_middleware(
@@ -44,6 +51,42 @@ app.add_middleware(
     expose_headers=config.CORS_EXPOSE_HEADERS,
     max_age=config.CORS_MAX_AGE,
 )
+
+
+# HTTP Basic security scheme
+security = HTTPBasic()
+
+def get_current_username(credentials: HTTPBasicCredentials = Security(security)):
+    correct_username = secrets.compare_digest(credentials.username, DOCS_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, DOCS_PASSWORD)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+# Custom OpenAPI route that requires authentication
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint(username: str = Depends(get_current_username)):
+    return get_openapi(
+        title="Compliance System API",
+        version="1.0.0",
+        description="API for the Compliance System",
+        routes=app.routes,
+    )
+
+# Custom Swagger UI route that requires authentication
+@app.get("/docs", include_in_schema=False)
+async def get_documentation(username: str = Depends(get_current_username)):
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="Compliance System API")
+
+# Custom Redoc route that requires authentication
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc_documentation(username: str = Depends(get_current_username)):
+    from fastapi.openapi.docs import get_redoc_html
+    return get_redoc_html(openapi_url="/openapi.json", title="Compliance System API")
 
 # Mount the routers
 app.include_router(documents_router, prefix="/api/documents", tags=["documents"])
@@ -288,8 +331,8 @@ async def create_task(
         raise he
     except Exception as e:
         db.rollback()
-        if not credentials:
-            return {"error": "Authentication failed"}
+        # if not credentials:
+        #     return {"error": "Authentication failed"}
         raise HTTPException(status_code=400, detail=str(e))
 
 
