@@ -25,25 +25,20 @@ if DEBUG:
 else:
     # Production environment
     CORS_ORIGINS = [
-        "https://compliance.ajuniorvc.com",  # Custom domain (if you have one)
-        "https://compliance-system.netlify.app",  # Default Netlify domain (update with your actual project name)
-        "https://compliance-system.vercel.app",   # Default Vercel domain (update with your actual project name)
-        "https://ajvc-compliance-system.com"
+        "https://compliance.ajuniorvc.com", 
+        "https://compliance-system.netlify.app", 
+        "https://compliance-system.vercel.app",
+        "ajvc-compliance-system.com"
     ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 CORS_ALLOW_HEADERS = [
-    "Content-Type", 
-    "Authorization", 
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-    "Access-Control-Request-Method",
-    "Access-Control-Request-Headers"
+    "*"
 ]
 CORS_EXPOSE_HEADERS = [
     "Content-Length", 
-    "Content-Range"
+    "Content-Range",
+    "X-Total-Count"
 ]
 CORS_MAX_AGE = 600  # How long the results of a preflight request can be cached (in seconds)
