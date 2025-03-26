@@ -28,6 +28,7 @@ else:
         "https://compliance.ajuniorvc.com",  # Custom domain (if you have one)
         "https://compliance-system.netlify.app",  # Default Netlify domain (update with your actual project name)
         "https://compliance-system.vercel.app",   # Default Vercel domain (update with your actual project name)
+        "https://ajvc-compliance-system.com"
     ]
 
 CORS_ALLOW_CREDENTIALS = True
