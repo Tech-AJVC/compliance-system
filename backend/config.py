@@ -27,18 +27,15 @@ else:
     CORS_ORIGINS = [
         "https://compliance.ajuniorvc.com", 
         "https://compliance-system.netlify.app", 
-        "https://compliance-system.vercel.app",
-        "ajvc-compliance-system.com"
+        "https://compliance-system.vercel.app",  
+        "https://ajvc-compliance-system.com"
     ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-CORS_ALLOW_HEADERS = [
-    "*"
-]
+CORS_ALLOW_HEADERS = ["*"]
 CORS_EXPOSE_HEADERS = [
     "Content-Length", 
-    "Content-Range",
-    "X-Total-Count"
+    "Content-Range"
 ]
 CORS_MAX_AGE = 600  # How long the results of a preflight request can be cached (in seconds)
