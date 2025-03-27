@@ -34,12 +34,16 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 import config
 from sqlalchemy import func
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 # Get authentication credentials from config
 DOCS_USERNAME = "abhi7"
 DOCS_PASSWORD = "comp$135!" 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+# Add HTTPS redirect middleware to ensure all requests use HTTPS
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Configure CORS using settings from config.py
 app.add_middleware(
