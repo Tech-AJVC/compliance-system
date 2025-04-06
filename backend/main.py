@@ -43,7 +43,7 @@ DOCS_PASSWORD = "comp$135!"
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Add HTTPS redirect middleware to ensure all requests use HTTPS
-app.add_middleware(HTTPSRedirectMiddleware)
+# app.add_middleware(HTTPSRedirectMiddleware)
 
 # Configure CORS using settings from config.py
 app.add_middleware(
@@ -326,9 +326,14 @@ async def create_task(
         # if not credentials:
         #     return {"error": "Authentication failed"}
 
-        # # print(f"Sending test email to: aviral@ajuniorvc.com")
+        # Prepare the email notification with additional details
         gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Created Notification",
-                         f"A new task has been created: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {task.description}")
+                         f"A new task has been created:\n\n"
+                         f"Task ID: {db_task.compliance_task_id}\n"
+                         f"Task Details: {task.description}\n"
+                         f"Category: {db_task.category}\n"
+                         f"Due Date: {db_task.deadline.strftime('%Y-%m-%d') if db_task.deadline else 'Not specified'}\n"
+                         f"Assignee: {assignee.name if assignee else 'Not assigned'}")
         return db_task
 
     except HTTPException as he:
@@ -412,10 +417,18 @@ async def get_tasks(
             query = query.order_by(ComplianceTask.deadline.asc())
         elif sort == "deadline_desc":
             query = query.order_by(ComplianceTask.deadline.desc())
+        elif sort == "status_asc":
+            query = query.order_by(ComplianceTask.state.asc())
+        elif sort == "status_desc":
+            query = query.order_by(ComplianceTask.state.desc())
+        elif sort == "assignee_asc":
+            query = query.order_by(User.name.asc())
+        elif sort == "assignee_desc":
+            query = query.order_by(User.name.desc())
         else:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid sort parameter. Use 'deadline_asc' or 'deadline_desc'."
+                detail="Invalid sort parameter. Use 'deadline_asc', 'deadline_desc', 'status_asc', 'status_desc', 'assignee_asc', or 'assignee_desc'."
             )
 
     # Get total count before pagination
@@ -582,8 +595,21 @@ async def update_task(
     try:
         db.commit()
         db.refresh(db_task)
+        # Get assignee name for the email
+        assignee_name = "Not assigned"
+        if db_task.assignee_id:
+            assignee = db.query(User).filter(User.user_id == db_task.assignee_id).first()
+            if assignee:
+                assignee_name = assignee.name
+                
+        # Prepare the email notification with additional details
         gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification",
-                         f"A task has been updated: \n TaskId:  {db_task.compliance_task_id} \n Task Details: {db_task.description}")
+                         f"A task has been updated:\n\n"
+                         f"Task ID: {db_task.compliance_task_id}\n"
+                         f"Task Details: {db_task.description}\n"
+                         f"Category: {db_task.category}\n"
+                         f"Due Date: {db_task.deadline.strftime('%Y-%m-%d') if db_task.deadline else 'Not specified'}\n"
+                         f"Assignee: {assignee_name}")
         return db_task
     except Exception as e:
         db.rollback()
