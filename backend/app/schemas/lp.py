@@ -2,8 +2,16 @@ from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import date, datetime
 from uuid import UUID
+from enum import Enum
 
 # LP Details Schemas
+
+# Define LP status options
+class LPStatus(str, Enum):
+    ONBOARDED = "Onboarded"
+    WAITING_FOR_KYC = "Waiting For KYC"
+    UNDER_REVIEW = "Under Review"
+    
 class LPDetailsBase(BaseModel):
     lp_name: str
     mobile_no: Optional[str] = None
@@ -25,6 +33,7 @@ class LPDetailsBase(BaseModel):
     citizenship: Optional[str] = None
     type: Optional[str] = None
     geography: Optional[str] = None
+    status: Optional[LPStatus] = LPStatus.WAITING_FOR_KYC
 
 class LPDetailsCreate(LPDetailsBase):
     pass

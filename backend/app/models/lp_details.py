@@ -29,6 +29,7 @@ class LPDetails(Base):
     citizenship = Column(String(50))
     type = Column(String(50))  # Individual, Corporate, etc.
     geography = Column(String(50))
+    status = Column(String(20), default="Waiting For KYC")
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
