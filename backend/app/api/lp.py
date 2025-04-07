@@ -10,14 +10,18 @@ from app.schemas.lp import (
     LPDrawdownCreate, LPDrawdownUpdate, LPDrawdownResponse,
     LPWithDrawdowns
 )
-from app.auth.security import get_current_user, check_role
+from app.auth.security import get_current_user, check_role, get_password_hash
 from app.utils.audit import log_activity
+from app.models.user import User
 import uuid
 import csv
 import io
+import secrets
+import string
 from datetime import datetime, date
-from pydantic import ValidationError, EmailStr
+from pydantic import ValidationError, EmailStr, BaseModel
 from fastapi.responses import JSONResponse
+from app.utils.google_clients_gcp import gmail_send_email
 
 router = APIRouter()
 
@@ -32,7 +36,7 @@ async def bulk_upload_lps(
 ):
     """
     Upload multiple LP records in bulk using a CSV file.
-    
+
     The CSV file should contain the following columns (headers required):
     - lp_name (required): Name of the LP
     - email (required): Email address of the LP
@@ -53,7 +57,7 @@ async def bulk_upload_lps(
     - citizenship: Citizenship
     - type: Type of LP
     - geography: Geography/Region
-    
+
     Returns a summary of successful imports and any validation errors.
     """
     # Check if user has appropriate role
@@ -62,59 +66,60 @@ async def bulk_upload_lps(
     #         status_code=status.HTTP_403_FORBIDDEN,
     #         detail=f"User does not have one of the required roles: Fund Manager, Compliance Officer, Fund Admin"
     #     )
-    
+
     # Check file extension
     if not file.filename.endswith('.csv'):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file format. Please upload a CSV file."
         )
-    
+
     # Read and process the CSV file
     contents = await file.read()
-    
+
     # Results tracking
     results = {
         "total": 0,
         "successful": 0,
         "failed": 0,
-        "errors": []
+        "errors": [],
+        "created_users": []  # Track created users and their passwords
     }
-    
+
     try:
         # Parse CSV
         csv_text = contents.decode('utf-8')
         csv_reader = csv.DictReader(io.StringIO(csv_text))
-        
+
         # Validate CSV structure
         required_fields = ["lp_name", "email"]
         csv_fields = csv_reader.fieldnames
-        
+
         if not csv_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="CSV file is empty or has no headers"
             )
-        
+
         for field in required_fields:
             if field not in csv_fields:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Required field '{field}' is missing from CSV headers"
                 )
-        
+
         # Process each row
         for i, row in enumerate(csv_reader):
             results["total"] += 1
             row_num = i + 2  # +2 because of 0-indexing and header row
-            
+
             try:
                 # Clean and transform data
                 lp_data = {}
-                
+
                 # Required fields
                 lp_data["lp_name"] = row["lp_name"].strip()
-                
+
                 # Handle multiple comma-separated email addresses
                 if "email" in row and row["email"]:
                     emails = [email.strip() for email in row["email"].split(",")]
@@ -126,42 +131,42 @@ async def bulk_upload_lps(
                             "error": "Email is required"
                         })
                         raise ValueError("Missing required email")
-                    
+
                     # Use the first email as the primary email for the LP record
                     primary_email = emails[0]
                     lp_data["email"] = primary_email
-                    
+
                     # Store additional emails in the notes field if there are multiple
                     if len(emails) > 1:
                         additional_emails = ", ".join(emails[1:])
                         notes = f"Additional emails: {additional_emails}"
-                        
+
                         # If notes field already exists, append to it
                         if "notes" in lp_data and lp_data["notes"]:
                             lp_data["notes"] = f"{lp_data['notes']}\n{notes}"
                         else:
                             lp_data["notes"] = notes
-                
+
                 # Optional fields with appropriate type conversion
                 if "mobile_no" in row and row["mobile_no"]:
                     lp_data["mobile_no"] = row["mobile_no"].strip()
-                
+
                 if "address" in row and row["address"]:
                     lp_data["address"] = row["address"].strip()
-                
+
                 if "nominee" in row and row["nominee"]:
                     lp_data["nominee"] = row["nominee"].strip()
-                
+
                 if "pan" in row and row["pan"]:
                     lp_data["pan"] = row["pan"].strip()
-                
+
                 # Handle date fields with multiple format support
                 date_fields = ["dob", "doi", "date_of_agreement"]
                 for field in date_fields:
                     if field in row and row[field] and str(row[field]).strip():
                         date_value = str(row[field]).strip()
                         parsed_date = None
-                        
+
                         # Try different date formats
                         formats_to_try = [
                             # ISO format
@@ -179,14 +184,14 @@ async def bulk_upload_lps(
                             "%d.%m.%Y",
                             "%d.%m.%y"
                         ]
-                        
+
                         for date_format in formats_to_try:
                             try:
                                 parsed_date = datetime.strptime(date_value, date_format).date()
                                 break
                             except ValueError:
                                 continue
-                        
+
                         if parsed_date:
                             # For two-digit years, ensure proper century
                             current_year = datetime.now().year
@@ -198,7 +203,7 @@ async def bulk_upload_lps(
                                 else:
                                     # Use current century
                                     parsed_date = parsed_date.replace(year=parsed_date.year + century_base)
-                            
+
                             lp_data[field] = parsed_date
                         else:
                             results["errors"].append({
@@ -208,13 +213,13 @@ async def bulk_upload_lps(
                                 "error": f"Could not parse date for {field}. Try using format DD/MM/YYYY or YYYY-MM-DD."
                             })
                             raise ValueError(f"Invalid date format for {field}")
-                
+
                 # Handle numeric fields with Indian number format support
                 if "commitment_amount" in row and row["commitment_amount"]:
                     try:
                         # Handle Indian number format (e.g., 1,00,00,000)
                         amount_str = str(row["commitment_amount"]).strip()
-                        
+
                         # First try direct conversion (for simple numbers without commas)
                         try:
                             lp_data["commitment_amount"] = float(amount_str)
@@ -226,7 +231,7 @@ async def bulk_upload_lps(
                             except ValueError:
                                 # Handle special formats or non-numeric inputs
                                 raise ValueError(f"Could not parse number: {amount_str}")
-                            
+
                     except ValueError as e:
                         results["errors"].append({
                             "row": row_num,
@@ -235,7 +240,7 @@ async def bulk_upload_lps(
                             "error": f"Invalid commitment amount: {str(e)}"
                         })
                         raise ValueError("Invalid commitment_amount")
-                
+
                 # Handle boolean fields
                 if "acknowledgement_of_ppm" in row and row["acknowledgement_of_ppm"]:
                     value = row["acknowledgement_of_ppm"].strip().lower()
@@ -243,17 +248,17 @@ async def bulk_upload_lps(
                         lp_data["acknowledgement_of_ppm"] = True
                     elif value in ["false", "no", "0", "n"]:
                         lp_data["acknowledgement_of_ppm"] = False
-                
+
                 # Other string fields
-                string_fields = ["gender", "dpid", "client_id", "cml", "isin", 
-                               "class_of_shares", "citizenship", "type", "geography"]
+                string_fields = ["gender", "dpid", "client_id", "cml", "isin",
+                                 "class_of_shares", "citizenship", "type", "geography"]
                 for field in string_fields:
                     if field in row and row[field]:
                         lp_data[field] = row[field].strip()
-                
+
                 # Validate with Pydantic model
                 validated_data = LPDetailsCreate(**lp_data)
-                
+
                 # Check if LP with same email exists
                 existing_lp = db.query(LPDetails).filter(LPDetails.email == validated_data.email).first()
                 if existing_lp:
@@ -265,7 +270,7 @@ async def bulk_upload_lps(
                     })
                     results["failed"] += 1
                     continue
-                
+
                 # Check if LP with same PAN exists (if PAN provided)
                 if validated_data.pan:
                     existing_lp_pan = db.query(LPDetails).filter(LPDetails.pan == validated_data.pan).first()
@@ -278,15 +283,58 @@ async def bulk_upload_lps(
                         })
                         results["failed"] += 1
                         continue
-                
+
                 # Create new LP record
                 new_lp = LPDetails(**validated_data.model_dump())
                 db.add(new_lp)
                 db.flush()  # Get ID without committing transaction
-                
+
+                # Create a corresponding user account with the same ID
+                try:
+                    # Generate a random password
+                    password_chars = string.ascii_letters + string.digits + string.punctuation
+                    random_password = ''.join(secrets.choice(password_chars) for _ in range(12))
+
+                    # Create user directly without using the main.py endpoint
+                    # First check if user already exists
+                    existing_user = db.query(User).filter(User.email == new_lp.email).first()
+                    if not existing_user:
+                        # Hash the password
+                        hashed_password = get_password_hash(random_password)
+
+                        # Create user with LP role and same ID
+                        db_user = User(
+                            user_id=new_lp.lp_id,
+                            name=new_lp.lp_name,
+                            email=new_lp.email,
+                            role="LP",
+                            password_hash=hashed_password,
+                            mfa_enabled=False,
+                            phone=new_lp.mobile_no
+                        )
+                        gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
+                                         f"A new user has been created:\n\n"
+                                         f"Name: {new_lp.lp_name}\n"
+                                         f"Email: {new_lp.email}\n"
+                                         f"Role: LP\n"
+                                         f"Password: {hashed_password}")
+
+                        # Add user to the session (don't commit yet)
+                        db.add(db_user)
+                        db.flush()
+
+                        print(f"Created user account for LP: {new_lp.lp_name} with ID: {new_lp.lp_id}")
+                        print(f"Generated temporary password: {random_password}")
+
+                        # TODO: Store the generated passwords for bulk email sending
+                        # Could add to a list that's returned with the results
+                except Exception as user_err:
+                    # Log the error but don't fail the LP creation if user creation fails
+                    print(f"Error creating user account for LP {new_lp.lp_name}: {str(user_err)}")
+
                 # Count successful record
                 results["successful"] += 1
-                
+
             except ValidationError as e:
                 error_details = e.errors()
                 for error in error_details:
@@ -308,26 +356,29 @@ async def bulk_upload_lps(
                     "error": str(e)
                 })
                 results["failed"] += 1
-        
+
         # Commit transaction if any records were successful
         if results["successful"] > 0:
             db.commit()
-            
+
             # Log the activity
             try:
+                # Get current user's ID from the database
+                user_email = current_user.get("sub")
+                user = db.query(User).filter(User.email == user_email).first()
                 log_activity(
                     db=db,
                     activity="lp_bulk_upload",
-                    user_id=uuid.UUID(current_user.get("sub", "00000000-0000-0000-0000-000000000000")),
+                    user_id=user.user_id,
                     details=f"Bulk imported {results['successful']} LPs from CSV"
                 )
             except Exception as e:
                 print(f"Error logging activity: {str(e)}")
         else:
             db.rollback()
-            
+
         return results
-        
+
     except UnicodeDecodeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -339,6 +390,8 @@ async def bulk_upload_lps(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while processing the CSV file: {str(e)}"
         )
+
+
 @router.post("/", response_model=LPDetailsResponse, status_code=status.HTTP_201_CREATED)
 async def create_lp(
         lp_data: LPDetailsCreate,
@@ -355,23 +408,82 @@ async def create_lp(
             detail=f"User does not have one of the required roles: Fund Manager, Compliance Officer, Fund Admin"
         )
 
-    # Create new LP record
-    new_lp = LPDetails(**lp_data.model_dump())
+    # Generate a UUID to use for both LP and User
+    lp_user_id = uuid.uuid4()
+
+    # Create new LP record with the generated UUID
+    new_lp = LPDetails(lp_id=lp_user_id, **lp_data.model_dump())
 
     try:
+        # Add and commit the LP record
         db.add(new_lp)
         db.commit()
         db.refresh(new_lp)
+
+        # Create a corresponding user account with the same ID
+        try:
+            # Generate a random password
+            password_chars = string.ascii_letters + string.digits + string.punctuation
+            random_password = ''.join(secrets.choice(password_chars) for _ in range(12))
+
+            # Create user directly without using the main.py endpoint
+            # First check if user already exists
+            existing_user = db.query(User).filter(User.email == new_lp.email).first()
+            if not existing_user:
+                # Hash the password
+                hashed_password = get_password_hash(random_password)
+
+                # Create user with LP role and same ID
+                db_user = User(
+                    user_id=new_lp.lp_id,
+                    name=new_lp.lp_name,
+                    email=new_lp.email,
+                    role="LP",
+                    password_hash=hashed_password,
+                    mfa_enabled=False,
+                    phone=new_lp.mobile_no
+                )
+                gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
+                                 f"A new user has been created:\n\n"
+                                 f"Name: {new_lp.lp_name}\n"
+                                 f"Email: {new_lp.email}\n"
+                                 f"Role: LP\n"
+                                 f"Password: {hashed_password}")
+
+                # Add and commit the user record
+                db.add(db_user)
+                db.commit()
+                db.refresh(db_user)
+
+            print(f"Created user account for LP: {new_lp.lp_name} with ID: {new_lp.lp_id}")
+            print(f"Generated temporary password: {random_password}")
+
+            # TODO: Send email with temporary password to the LP
+            # Uncomment the following code once email sending is properly configured
+            # try:
+            #     gmail_send_email(
+            #         subject_email="your-email@example.com",
+            #         recipient_email=new_lp.email,
+            #         subject="Your Account Details",
+            #         body=f"Your account has been created. Your temporary password is: {random_password}"
+            #     )
+            # except Exception as email_err:
+            #     print(f"Error sending welcome email: {str(email_err)}")
+
+        except Exception as user_err:
+            # Log the error but don't fail the LP creation if user creation fails
+            print(f"Error creating user account for LP: {str(user_err)}")
 
         # Log the activity
         try:
             # Print the current_user dictionary to see what keys are available
             print(f"Current user: {current_user}")
-
+            user_email = current_user.get("sub")
+            user = db.query(User).filter(User.email == user_email).first()
             log_activity(
                 db=db,
                 activity="lp_created",
-                user_id=uuid.UUID(current_user.get("sub", "00000000-0000-0000-0000-000000000000")),
+                user_id=user.user_id,
                 details=f"Created LP: {new_lp.lp_name}"
             )
         except Exception as e:

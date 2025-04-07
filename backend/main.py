@@ -22,6 +22,7 @@ from app.utils.audit import log_activity
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 import uuid
+from uuid import UUID
 from datetime import timedelta, datetime
 from sqlalchemy.exc import IntegrityError
 import traceback
@@ -148,7 +149,7 @@ async def read_root():
 
 
 @app.post("/users/", response_model=UserResponse)
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_uuid: UUID = None):
     try:
         # Check if user with this email already exists
         existing_user = db.query(User).filter(User.email == user.email).first()
@@ -171,17 +172,37 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
                 detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
             )
 
-        db_user = User(
-            name=user.name,
-            email=user.email,
-            role=user.role,
-            password_hash=hashed_password,
-            mfa_enabled=user.mfa_enabled,
-            phone=user.phone
-        )
+        # If a specific UUID is provided, use it instead of generating a new one
+        if specific_uuid:
+            db_user = User(
+                user_id=specific_uuid,
+                name=user.name,
+                email=user.email,
+                role=user.role,
+                password_hash=hashed_password,
+                mfa_enabled=user.mfa_enabled,
+                phone=user.phone
+            )
+        else:
+            db_user = User(
+                name=user.name,
+                email=user.email,
+                role=user.role,
+                password_hash=hashed_password,
+                mfa_enabled=user.mfa_enabled,
+                phone=user.phone
+            )
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+
+        gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
+        f"A new user has been created:\n\n"
+        f"Name: {db_user.name}\n"
+        f"Email: {db_user.email}\n"
+        f"Role: {db_user.role}\n"
+        f"Password: {hashed_password}")
+
         return db_user
 
     except IntegrityError as e:
@@ -493,6 +514,122 @@ async def get_tasks(
     return {"tasks": tasks, "total": total}
 
 
+@app.get("/api/tasks/search", response_model=ComplianceTaskList)
+async def search_tasks_by_description(
+        description: str = Query(..., description="Search term for task description"),
+        state: Optional[TaskState] = None,
+        category: Optional[TaskCategory] = None,
+        skip: int = Query(0, description="Number of records to skip"),
+        limit: int = Query(100, description="Maximum number of records to return"),
+        current_user: dict = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    """
+    Search for tasks based on description using case-insensitive partial matching.
+    Returns all tasks that match the provided description pattern.
+    Additional filters for state and category can be applied.
+    """
+    # Build query with filter for description using ILIKE
+    query = db.query(ComplianceTask).filter(
+        ComplianceTask.description.ilike(f"%{description}%")
+    )
+    
+    # Apply additional filters if provided
+    if state:
+        query = query.filter(ComplianceTask.state == state)
+    if category:
+        query = query.filter(ComplianceTask.category == category)
+    
+    # Execute query with pagination
+    matching_tasks = query.offset(skip).limit(limit).all()
+    
+    # Log the search activity
+    try:
+        user = db.query(User).filter(User.email == current_user["sub"]).first()
+        if user:
+            log_activity(
+                db,
+                "task_search",
+                user.user_id,
+                f"Task search performed with query: {description}"
+            )
+    except Exception as e:
+        print(f"Error logging activity: {str(e)}")
+    
+    # Map database objects to response format
+    results = []
+    for task in matching_tasks:
+        # Get assignee, reviewer, and approver names
+        assignee_name = None
+        reviewer_name = None
+        approver_name = None
+        
+        # Get assignee name if assigned
+        if task.assignee_id:
+            assignee = db.query(User).filter(User.user_id == task.assignee_id).first()
+            if assignee:
+                assignee_name = assignee.name
+                
+        # Get reviewer name if assigned
+        if task.reviewer_id:
+            reviewer = db.query(User).filter(User.user_id == task.reviewer_id).first()
+            if reviewer:
+                reviewer_name = reviewer.name
+                
+        # Get approver name if assigned
+        if task.approver_id:
+            approver = db.query(User).filter(User.user_id == task.approver_id).first()
+            if approver:
+                approver_name = approver.name
+        
+        # Get documents associated with the task
+        task_documents = db.query(TaskDocument).filter(
+            TaskDocument.compliance_task_id == task.compliance_task_id
+        ).all()
+
+        documents = []
+        for task_doc in task_documents:
+            document = db.query(Document).filter(
+                Document.document_id == task_doc.document_id
+            ).first()
+
+            if document:
+                documents.append({
+                    "document_id": document.document_id,
+                    "name": document.name,
+                    "category": document.category,
+                    "drive_link": document.drive_link
+                })
+        
+        # Create response object
+        task_dict = {
+            "compliance_task_id": task.compliance_task_id,
+            "description": task.description,
+            "state": task.state,
+            "category": task.category,
+            "deadline": task.deadline,
+            "assignee_id": task.assignee_id,
+            "reviewer_id": task.reviewer_id,
+            "approver_id": task.approver_id,
+            "dependent_task_id": task.dependent_task_id,
+            "recurrence": task.recurrence,
+            "created_at": task.created_at,
+            "updated_at": task.updated_at,
+            "assignee_name": assignee_name,
+            "reviewer_name": reviewer_name,
+            "approver_name": approver_name,
+            "documents": documents
+        }
+        
+        results.append(task_dict)
+    
+    # Get total count for pagination info
+    total_count = query.count()
+    
+    # Return in format expected by ComplianceTaskList
+    return {"tasks": results, "total": total_count}
+
+
 @app.get("/api/tasks/{task_id}", response_model=ComplianceTaskResponse)
 async def get_task(
         task_id: uuid.UUID,
@@ -573,6 +710,22 @@ async def update_task(
         current_user: dict = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Update specific fields of a task while keeping other fields unchanged.
+    
+    This endpoint supports partial updates - you only need to include the fields
+    you want to update in the request body. All other fields will remain unchanged.
+    
+    Example: To update only the state and description of a task:
+    ```json
+    {
+        "state": "IN_PROGRESS",
+        "description": "Updated description"
+    }
+    ```
+    
+    All other fields (deadline, assignee_id, etc.) will remain the same.
+    """
     db_task = db.query(ComplianceTask).filter(ComplianceTask.compliance_task_id == task_id).first()
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -587,8 +740,14 @@ async def update_task(
                 status_code=400,
                 detail="Cannot complete task: dependent task is not completed"
             )
-    # Update task fields
+    # Update only the fields that were provided in the request
+    # The exclude_unset=True parameter ensures only explicitly set fields are included
     update_data = task_update.model_dump(exclude_unset=True)
+    
+    # Log which fields are being updated
+    print(f"Updating task {task_id} with fields: {', '.join(update_data.keys())}")
+    
+    # Apply only the changed fields to the database object
     for field, value in update_data.items():
         setattr(db_task, field, value)
 
