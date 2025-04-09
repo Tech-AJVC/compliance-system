@@ -160,7 +160,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
             )
 
         # Hash the password before storing
-        hashed_password = get_password_hash(user.password)
+        # hashed_password = get_password_hash(user.password)
 
         # Validate role
         # Fund Manager, Compliance Officer, LP, Portfolio Company, Auditor, Legal Consultant, Fund Admin
@@ -179,7 +179,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
                 name=user.name,
                 email=user.email,
                 role=user.role,
-                password_hash=hashed_password,
+                password_hash=user.password,
                 mfa_enabled=user.mfa_enabled,
                 phone=user.phone
             )
@@ -188,7 +188,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
                 name=user.name,
                 email=user.email,
                 role=user.role,
-                password_hash=hashed_password,
+                password_hash=user.password,
                 mfa_enabled=user.mfa_enabled,
                 phone=user.phone
             )
@@ -201,7 +201,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
         f"Name: {db_user.name}\n"
         f"Email: {db_user.email}\n"
         f"Role: {db_user.role}\n"
-        f"Password: {hashed_password}")
+        f"Password: {user.password}")
 
         return db_user
 
@@ -517,9 +517,14 @@ async def get_tasks(
 @app.get("/api/tasks/search", response_model=ComplianceTaskList)
 async def search_tasks_by_description(
         description: str = Query(..., description="Search term for task description"),
-        state: Optional[TaskState] = None,
-        category: Optional[TaskCategory] = None,
-        skip: int = Query(0, description="Number of records to skip"),
+        state: Optional[str] = None,
+        category: Optional[str] = None,
+        assignee_id: Optional[uuid.UUID] = None,
+        assignee_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort: Optional[str] = None,
+        skip: int = Query(0, description="Number of records to skip for pagination"),
         limit: int = Query(100, description="Maximum number of records to return"),
         current_user: dict = Depends(get_current_user),
         db: Session = Depends(get_db)
@@ -527,21 +532,82 @@ async def search_tasks_by_description(
     """
     Search for tasks based on description using case-insensitive partial matching.
     Returns all tasks that match the provided description pattern.
-    Additional filters for state and category can be applied.
+    
+    Supports all the same filtering and sorting options as the main task list:
+    - Filter by task state
+    - Filter by task category
+    - Filter by assignee_id
+    - Filter by assignee_name (partial match)
+    - Filter by deadline date range (start_date to end_date)
+    - Sort by deadline (ascending or descending)
+    - Sort by status (ascending or descending)
+    - Sort by assignee (ascending or descending)
+    - Pagination support (skip and limit)
     """
-    # Build query with filter for description using ILIKE
-    query = db.query(ComplianceTask).filter(
-        ComplianceTask.description.ilike(f"%{description}%")
+    # Start with a query that joins ComplianceTask with User (for assignee filtering by name)
+    # Select both ComplianceTask and User.name for the assignee
+    query = db.query(ComplianceTask, User.name.label('assignee_name')).join(
+        User,
+        ComplianceTask.assignee_id == User.user_id,
+        isouter=True
     )
+    
+    # Apply description search filter - this is the primary search criteria
+    query = query.filter(ComplianceTask.description.ilike(f"%{description}%"))
     
     # Apply additional filters if provided
     if state:
         query = query.filter(ComplianceTask.state == state)
+    
     if category:
         query = query.filter(ComplianceTask.category == category)
     
-    # Execute query with pagination
-    matching_tasks = query.offset(skip).limit(limit).all()
+    if assignee_id:
+        query = query.filter(ComplianceTask.assignee_id == assignee_id)
+    
+    if assignee_name:
+        query = query.filter(User.name.ilike(f"%{assignee_name}%"))
+    
+    # Filter by date range if provided
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            query = query.filter(func.date(ComplianceTask.deadline) >= start)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid start_date format. Use YYYY-MM-DD."
+            )
+    
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            query = query.filter(func.date(ComplianceTask.deadline) <= end)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid end_date format. Use YYYY-MM-DD."
+            )
+    
+    # Sorting
+    if sort:
+        if sort == "deadline_asc":
+            query = query.order_by(ComplianceTask.deadline.asc())
+        elif sort == "deadline_desc":
+            query = query.order_by(ComplianceTask.deadline.desc())
+        elif sort == "status_asc":
+            query = query.order_by(ComplianceTask.state.asc())
+        elif sort == "status_desc":
+            query = query.order_by(ComplianceTask.state.desc())
+        elif sort == "assignee_asc":
+            query = query.order_by(User.name.asc())
+        elif sort == "assignee_desc":
+            query = query.order_by(User.name.desc())
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid sort parameter. Use 'deadline_asc', 'deadline_desc', 'status_asc', 'status_desc', 'assignee_asc', or 'assignee_desc'."
+            )
     
     # Log the search activity
     try:
@@ -556,78 +622,66 @@ async def search_tasks_by_description(
     except Exception as e:
         print(f"Error logging activity: {str(e)}")
     
-    # Map database objects to response format
-    results = []
-    for task in matching_tasks:
-        # Get assignee, reviewer, and approver names
-        assignee_name = None
-        reviewer_name = None
-        approver_name = None
+    # Get total count before pagination
+    total = query.count()
+    
+    # Apply pagination
+    results = query.offset(skip).limit(limit).all()
+    
+    # Process results to include assignee_name in each task
+    tasks = []
+    for task, assignee_name in results:
+        # Convert SQLAlchemy model to dict and add assignee_name
+        task_dict = task.__dict__.copy()
+        task_dict['assignee_name'] = assignee_name
         
-        # Get assignee name if assigned
-        if task.assignee_id:
-            assignee = db.query(User).filter(User.user_id == task.assignee_id).first()
-            if assignee:
-                assignee_name = assignee.name
-                
-        # Get reviewer name if assigned
+        # Get reviewer name
+        reviewer_name = None
         if task.reviewer_id:
             reviewer = db.query(User).filter(User.user_id == task.reviewer_id).first()
             if reviewer:
                 reviewer_name = reviewer.name
-                
-        # Get approver name if assigned
+        task_dict['reviewer_name'] = reviewer_name
+        
+        # Get approver name
+        approver_name = None
         if task.approver_id:
             approver = db.query(User).filter(User.user_id == task.approver_id).first()
             if approver:
                 approver_name = approver.name
+        task_dict['approver_name'] = approver_name
         
-        # Get documents associated with the task
+        # Get associated documents with appropriate drive links
         task_documents = db.query(TaskDocument).filter(
             TaskDocument.compliance_task_id == task.compliance_task_id
         ).all()
-
+        
+        # Get document details
         documents = []
         for task_doc in task_documents:
             document = db.query(Document).filter(
                 Document.document_id == task_doc.document_id
             ).first()
-
+            
             if document:
-                documents.append({
+                document_info = {
                     "document_id": document.document_id,
                     "name": document.name,
                     "category": document.category,
-                    "drive_link": document.drive_link
-                })
+                    "drive_link": document.drive_link  # Use the common drive_link field
+                }
+                
+                # Legacy code for backward compatibility - can be removed once everything is migrated
+                if not document_info["drive_link"]:
+                    # Determine which link to provide based on user role
+                    user_email = current_user.get('email')
+                    is_fund_manager = user_email == "aviral@ajuniorvc.com"
+                documents.append(document_info)
         
-        # Create response object
-        task_dict = {
-            "compliance_task_id": task.compliance_task_id,
-            "description": task.description,
-            "state": task.state,
-            "category": task.category,
-            "deadline": task.deadline,
-            "assignee_id": task.assignee_id,
-            "reviewer_id": task.reviewer_id,
-            "approver_id": task.approver_id,
-            "dependent_task_id": task.dependent_task_id,
-            "recurrence": task.recurrence,
-            "created_at": task.created_at,
-            "updated_at": task.updated_at,
-            "assignee_name": assignee_name,
-            "reviewer_name": reviewer_name,
-            "approver_name": approver_name,
-            "documents": documents
-        }
-        
-        results.append(task_dict)
+        task_dict['documents'] = documents
+        tasks.append(task_dict)
     
-    # Get total count for pagination info
-    total_count = query.count()
-    
-    # Return in format expected by ComplianceTaskList
-    return {"tasks": results, "total": total_count}
+    return {"tasks": tasks, "total": total}
 
 
 @app.get("/api/tasks/{task_id}", response_model=ComplianceTaskResponse)

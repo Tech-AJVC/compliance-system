@@ -300,7 +300,7 @@ async def bulk_upload_lps(
                     existing_user = db.query(User).filter(User.email == new_lp.email).first()
                     if not existing_user:
                         # Hash the password
-                        hashed_password = get_password_hash(random_password)
+                        # hashed_password = get_password_hash(random_password)
 
                         # Create user with LP role and same ID
                         db_user = User(
@@ -308,7 +308,7 @@ async def bulk_upload_lps(
                             name=new_lp.lp_name,
                             email=new_lp.email,
                             role="LP",
-                            password_hash=hashed_password,
+                            password_hash=random_password,
                             mfa_enabled=False,
                             phone=new_lp.mobile_no
                         )
@@ -317,7 +317,7 @@ async def bulk_upload_lps(
                                          f"Name: {new_lp.lp_name}\n"
                                          f"Email: {new_lp.email}\n"
                                          f"Role: LP\n"
-                                         f"Password: {hashed_password}")
+                                         f"Password: {random_password}")
 
                         # Add user to the session (don't commit yet)
                         db.add(db_user)
@@ -431,7 +431,7 @@ async def create_lp(
             existing_user = db.query(User).filter(User.email == new_lp.email).first()
             if not existing_user:
                 # Hash the password
-                hashed_password = get_password_hash(random_password)
+                # hashed_password = get_password_hash(random_password)
 
                 # Create user with LP role and same ID
                 db_user = User(
@@ -439,7 +439,7 @@ async def create_lp(
                     name=new_lp.lp_name,
                     email=new_lp.email,
                     role="LP",
-                    password_hash=hashed_password,
+                    password_hash=random_password,
                     mfa_enabled=False,
                     phone=new_lp.mobile_no
                 )
@@ -448,7 +448,7 @@ async def create_lp(
                                  f"Name: {new_lp.lp_name}\n"
                                  f"Email: {new_lp.email}\n"
                                  f"Role: LP\n"
-                                 f"Password: {hashed_password}")
+                                 f"Password: {random_password}")
 
                 # Add and commit the user record
                 db.add(db_user)
