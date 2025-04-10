@@ -139,10 +139,20 @@ async def upload_document(
             db_document.drive_file_id = drive_result.get('id')
 
             # Store main drive link (uploader's link)
-            db_document.drive_link = drive_result.get('shared_links', {}).get('uploader')
-
+            drive_link = drive_result.get('shared_links', {}).get('uploader')
+            db_document.drive_link = drive_link
+            
+            # Store Google Drive link as file_path instead of local path
+            local_file_path = db_document.file_path
+            db_document.file_path = drive_link
+            
             db.commit()
             db.refresh(db_document)
+            
+            # Delete the local file after successful upload to Google Drive
+            from app.utils.file_storage import delete_file
+            delete_file(local_file_path)
+            logger.info(f"Deleted local file {local_file_path} after uploading to Google Drive")
 
         return db_document
     except Exception as e:
