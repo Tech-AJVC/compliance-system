@@ -225,7 +225,12 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
 @app.post("/api/auth/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.password_hash):
+    print("User:")
+    print(user.email)
+    print(form_data.username)
+    print(user.password_hash)
+    print(form_data.password)
+    if not user or not (form_data.password == user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
