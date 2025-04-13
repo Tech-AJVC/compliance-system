@@ -16,7 +16,8 @@ class TaskCategory(str, Enum):
     SEBI = "SEBI"
     RBI = "RBI"
     IT_GST = "IT/GST"
-
+    LP = "LP"
+    OTHER = "Other"
 
 class DocumentInfo(BaseModel):
     document_id: UUID4

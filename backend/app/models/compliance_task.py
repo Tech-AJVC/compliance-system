@@ -17,6 +17,8 @@ class TaskCategory(str, enum.Enum):
     SEBI = "SEBI"
     RBI = "RBI"
     IT_GST = "IT/GST"
+    LP = "LP"
+    OTHER = "Other"
 
 class ComplianceTask(Base):
     __tablename__ = "compliance_tasks"
