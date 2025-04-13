@@ -372,6 +372,10 @@ async def get_tasks(
         category: Optional[str] = None,
         assignee_id: Optional[uuid.UUID] = None,
         assignee_name: Optional[str] = None,
+        reviewer_id: Optional[uuid.UUID] = None,
+        reviewer_name: Optional[str] = None,
+        approver_id: Optional[uuid.UUID] = None,
+        approver_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         sort: Optional[str] = None,
@@ -410,6 +414,36 @@ async def get_tasks(
 
     if assignee_name:
         query = query.filter(User.name.ilike(f"%{assignee_name}%"))
+
+    # Filter by reviewer ID if provided    
+    if reviewer_id:
+        query = query.filter(ComplianceTask.reviewer_id == reviewer_id)
+        
+    # Filter by reviewer name if provided
+    if reviewer_name:
+        # Get user IDs that match the reviewer name
+        reviewer_user_ids = db.query(User.user_id).filter(User.name.ilike(f"%{reviewer_name}%")).all()
+        reviewer_ids = [user_id[0] for user_id in reviewer_user_ids]
+        if reviewer_ids:
+            query = query.filter(ComplianceTask.reviewer_id.in_(reviewer_ids))
+        else:
+            # If no matching reviewers, return empty result
+            query = query.filter(ComplianceTask.reviewer_id == None)
+        
+    # Filter by approver ID if provided
+    if approver_id:
+        query = query.filter(ComplianceTask.approver_id == approver_id)
+        
+    # Filter by approver name if provided
+    if approver_name:
+        # Get user IDs that match the approver name
+        approver_user_ids = db.query(User.user_id).filter(User.name.ilike(f"%{approver_name}%")).all()
+        approver_ids = [user_id[0] for user_id in approver_user_ids]
+        if approver_ids:
+            query = query.filter(ComplianceTask.approver_id.in_(approver_ids))
+        else:
+            # If no matching approvers, return empty result
+            query = query.filter(ComplianceTask.approver_id == None)
 
     # Filter by date range if provided
     if start_date:
@@ -521,6 +555,10 @@ async def search_tasks_by_description(
         category: Optional[str] = None,
         assignee_id: Optional[uuid.UUID] = None,
         assignee_name: Optional[str] = None,
+        reviewer_id: Optional[uuid.UUID] = None,
+        reviewer_name: Optional[str] = None,
+        approver_id: Optional[uuid.UUID] = None,
+        approver_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         sort: Optional[str] = None,
@@ -567,6 +605,36 @@ async def search_tasks_by_description(
     
     if assignee_name:
         query = query.filter(User.name.ilike(f"%{assignee_name}%"))
+    
+    # Filter by reviewer ID if provided    
+    if reviewer_id:
+        query = query.filter(ComplianceTask.reviewer_id == reviewer_id)
+        
+    # Filter by reviewer name if provided
+    if reviewer_name:
+        # Get user IDs that match the reviewer name
+        reviewer_user_ids = db.query(User.user_id).filter(User.name.ilike(f"%{reviewer_name}%")).all()
+        reviewer_ids = [user_id[0] for user_id in reviewer_user_ids]
+        if reviewer_ids:
+            query = query.filter(ComplianceTask.reviewer_id.in_(reviewer_ids))
+        else:
+            # If no matching reviewers, return empty result
+            query = query.filter(ComplianceTask.reviewer_id == None)
+        
+    # Filter by approver ID if provided
+    if approver_id:
+        query = query.filter(ComplianceTask.approver_id == approver_id)
+        
+    # Filter by approver name if provided
+    if approver_name:
+        # Get user IDs that match the approver name
+        approver_user_ids = db.query(User.user_id).filter(User.name.ilike(f"%{approver_name}%")).all()
+        approver_ids = [user_id[0] for user_id in approver_user_ids]
+        if approver_ids:
+            query = query.filter(ComplianceTask.approver_id.in_(approver_ids))
+        else:
+            # If no matching approvers, return empty result
+            query = query.filter(ComplianceTask.approver_id == None)
     
     # Filter by date range if provided
     if start_date:
@@ -755,6 +823,66 @@ async def get_task(
     task_dict['documents'] = documents
 
     return task_dict
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(
+        task_id: uuid.UUID,
+        current_user: dict = Depends(check_role("Fund Manager")),
+        db: Session = Depends(get_db)
+):
+    """
+    Delete a compliance task. Only available to users with the Fund Manager role.
+    
+    Args:
+        task_id: UUID of the task to delete
+        current_user: Current authenticated user (must be Fund Manager)
+        db: Database session
+    
+    Returns:
+        JSON response confirming deletion
+    """
+    # Find the task
+    db_task = db.query(ComplianceTask).filter(ComplianceTask.compliance_task_id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Get task description for the log
+    task_description = db_task.description
+    
+    # Delete the task
+    try:
+        # Get user ID for logging
+        user_email = current_user.get("sub")
+        user = db.query(User).filter(User.email == user_email).first()
+        
+        # First delete related records in task_documents table
+        from app.models.document import TaskDocument
+        task_documents = db.query(TaskDocument).filter(TaskDocument.compliance_task_id == task_id).all()
+        
+        if task_documents:
+            print(f"Deleting {len(task_documents)} related task document relationships")
+            for task_doc in task_documents:
+                db.delete(task_doc)
+            db.flush()  # Apply the deletes but don't commit yet
+        
+        # Now delete the task itself
+        db.delete(db_task)
+        db.commit()
+        
+        # Log the deletion
+        if user:
+            log_activity(
+                db=db,
+                activity="task_deleted",
+                user_id=user.user_id,
+                details=f"Deleted task: {task_description} (ID: {task_id})"
+            )
+        
+        return {"status": "success", "message": f"Task deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error deleting task: {str(e)}")
 
 
 @app.patch("/api/tasks/{task_id}", response_model=ComplianceTaskResponse)

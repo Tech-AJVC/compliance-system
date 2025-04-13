@@ -18,6 +18,8 @@ class DocumentCategory(str, enum.Enum):
     KYC = "KYC"
     NOTIFICATION = "Notification"
     REPORT = "Report"
+    CERTIFICATE = "Certificate"
+    INFORMATION = "Information"
     OTHER = "Other"
 
 
