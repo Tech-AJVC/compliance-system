@@ -33,8 +33,6 @@ else:
         # Make sure to add any domains you missed here
         "http://compliance-system.netlify.app",
         "http://ajvc-compliance-system.com",
-        # Sometimes using wildcard is necessary for complex deployments
-        "*"
     ]
 
 CORS_ALLOW_CREDENTIALS = True
