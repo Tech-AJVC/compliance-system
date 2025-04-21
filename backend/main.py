@@ -54,9 +54,7 @@ app.add_middleware(
     allow_methods=config.CORS_ALLOW_METHODS,
     allow_headers=config.CORS_ALLOW_HEADERS,
     expose_headers=config.CORS_EXPOSE_HEADERS,
-    max_age=config.CORS_MAX_AGE,
-    # Ensure CORS headers are included with error responses
-    expose_on_error=True
+    max_age=config.CORS_MAX_AGE
 )
 
 

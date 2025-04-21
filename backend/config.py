@@ -28,7 +28,12 @@ else:
         "https://compliance.ajuniorvc.com", 
         "https://compliance-system.netlify.app", 
         "https://compliance-system.vercel.app",  
-        "https://ajvc-compliance-system.com"
+        "https://ajvc-compliance-system.com",
+        # Make sure to add any domains you missed here
+        "http://compliance-system.netlify.app",
+        "http://ajvc-compliance-system.com",
+        # Sometimes using wildcard is necessary for complex deployments
+        "*"
     ]
 
 CORS_ALLOW_CREDENTIALS = True
