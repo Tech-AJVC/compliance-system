@@ -952,7 +952,31 @@ async def update_task(
                          f"Category: {db_task.category}\n"
                          f"Due Date: {db_task.deadline.strftime('%Y-%m-%d') if db_task.deadline else 'Not specified'}\n"
                          f"Assignee: {assignee_name}")
-        return db_task
+        
+        # Create response with properly formatted documents
+        # First, get all document information related to this task
+        doc_info_list = []
+        for task_doc in db_task.documents:
+            # Get the actual document details
+            doc = db.query(Document).filter(Document.document_id == task_doc.document_id).first()
+            if doc:
+                doc_info_list.append({
+                    "document_id": doc.document_id,
+                    "name": doc.name,
+                    "category": doc.category,
+                    "drive_link": doc.drive_link
+                })
+        
+        # Return full response with transformed document list
+        response = {
+            **db_task.__dict__,
+            "documents": doc_info_list
+        }
+        # Remove SQLAlchemy state
+        if "_sa_instance_state" in response:
+            response.pop("_sa_instance_state")
+            
+        return response
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
