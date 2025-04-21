@@ -14,6 +14,7 @@ SCOPES = [
 # Environment detection (set this to False in production)
 DEBUG = False
 
+
 # CORS Configuration
 if DEBUG:
     # Development environment
