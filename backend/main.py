@@ -857,7 +857,18 @@ async def delete_task(
         user_email = current_user.get("sub")
         user = db.query(User).filter(User.email == user_email).first()
         
-        # First delete related records in task_documents table
+        # First check for any dependent tasks that reference this task
+        dependent_tasks = db.query(ComplianceTask).filter(ComplianceTask.dependent_task_id == task_id).all()
+        
+        if dependent_tasks:
+            print(f"Found {len(dependent_tasks)} tasks that depend on this task")
+            for dep_task in dependent_tasks:
+                # Remove the dependency relationship
+                print(f"Removing dependency from task {dep_task.compliance_task_id}")
+                dep_task.dependent_task_id = None
+            db.flush()  # Apply these changes but don't commit yet
+        
+        # Delete related records in task_documents table
         from app.models.document import TaskDocument
         task_documents = db.query(TaskDocument).filter(TaskDocument.compliance_task_id == task_id).all()
         
