@@ -943,15 +943,6 @@ async def update_task(
             assignee = db.query(User).filter(User.user_id == db_task.assignee_id).first()
             if assignee:
                 assignee_name = assignee.name
-                
-        # Prepare the email notification with additional details
-        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification",
-                         f"A task has been updated:\n\n"
-                         f"Task ID: {db_task.compliance_task_id}\n"
-                         f"Task Details: {db_task.description}\n"
-                         f"Category: {db_task.category}\n"
-                         f"Due Date: {db_task.deadline.strftime('%Y-%m-%d') if db_task.deadline else 'Not specified'}\n"
-                         f"Assignee: {assignee_name}")
         
         # Create response with properly formatted documents
         # First, get all document information related to this task
@@ -975,7 +966,16 @@ async def update_task(
         # Remove SQLAlchemy state
         if "_sa_instance_state" in response:
             response.pop("_sa_instance_state")
-            
+        
+        # Prepare the email notification with additional details
+        gmail_send_email("tech@ajuniorvc.com", "aviral@ajuniorvc.com", "Task Updated Notification",
+                         f"A task has been updated:\n\n"
+                         f"Task ID: {db_task.compliance_task_id}\n"
+                         f"Task Details: {db_task.description}\n"
+                         f"Category: {db_task.category}\n"
+                         f"Due Date: {db_task.deadline.strftime('%Y-%m-%d') if db_task.deadline else 'Not specified'}\n"
+                         f"Assignee: {assignee_name}")
+        
         return response
     except Exception as e:
         db.rollback()
