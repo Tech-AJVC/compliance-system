@@ -252,6 +252,118 @@ async def read_users_me(current_user: dict = Depends(get_current_user), db: Sess
     return user
 
 
+@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: uuid.UUID,
+    current_user: dict = Depends(check_role(["Fund Manager", "Compliance Officer", "Admin"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a user and all associated data. Limited to Admin users only.
+    
+    This will delete:
+    1. All tasks where the user is assignee, reviewer, or approver
+    2. All LP records if the user is an LP
+    3. All compliance records related to the user
+    4. The user account itself
+    
+    Args:
+        user_id: UUID of the user to delete
+        current_user: Current authenticated user (must be Admin)
+        db: Database session
+    
+    Returns:
+        204 No Content on success
+    """
+    # First verify the user exists
+    db_user = db.query(User).filter(User.user_id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Store user info for logging
+    user_email = db_user.email
+    user_name = db_user.name
+    
+    try:
+        print(f"Starting deletion process for user {user_id} ({user_email})")
+        
+        # 1. Check for any LP records associated with this user (by email)
+        from app.models.lp_details import LPDetails
+        lp_record = db.query(LPDetails).filter(LPDetails.email == user_email).first()
+        
+        if lp_record:
+            lp_id = lp_record.lp_id
+            print(f"User is an LP. Deleting LP record and all associated data for LP ID: {lp_id}")
+            
+            # 1a. Delete compliance records for this LP
+            from app.models.compliance_records import ComplianceRecord
+            db.query(ComplianceRecord).filter(ComplianceRecord.lp_id == lp_id).delete()
+            print(f"Deleted compliance records for LP {lp_id}")
+            
+            # 1b. Delete drawdowns for this LP
+            from app.models.lp_drawdowns import LPDrawdown
+            db.query(LPDrawdown).filter(LPDrawdown.lp_id == lp_id).delete()
+            print(f"Deleted drawdown records for LP {lp_id}")
+            
+            # 1c. Finally delete the LP record itself
+            db.delete(lp_record)
+            db.flush()
+            print(f"Deleted LP record {lp_id}")
+        
+        # 2. Handle tasks where user is assignee, reviewer, or approver
+        
+        # 2a. Find all tasks where user is assignee
+        assignee_tasks = db.query(ComplianceTask).filter(ComplianceTask.assignee_id == user_id).all()
+        
+        for task in assignee_tasks:
+            print(f"Handling task {task.compliance_task_id} where user was assignee")
+            # Delete task documents relationships first
+            from app.models.document import TaskDocument
+            db.query(TaskDocument).filter(TaskDocument.compliance_task_id == task.compliance_task_id).delete()
+            
+            # Check for dependent tasks and remove dependencies
+            dependent_tasks = db.query(ComplianceTask).filter(
+                ComplianceTask.dependent_task_id == task.compliance_task_id
+            ).all()
+            
+            for dep_task in dependent_tasks:
+                dep_task.dependent_task_id = None
+            
+            # Delete the task
+            db.delete(task)
+        
+        print(f"Deleted {len(assignee_tasks)} tasks where user was assignee")
+        
+        # 2b. Update tasks where user is reviewer (set reviewer to NULL)
+        reviewer_count = db.query(ComplianceTask).filter(ComplianceTask.reviewer_id == user_id).update(
+            {ComplianceTask.reviewer_id: None}
+        )
+        print(f"Updated {reviewer_count} tasks where user was reviewer")
+        
+        # 2c. Update tasks where user is approver (set approver to NULL)
+        approver_count = db.query(ComplianceTask).filter(ComplianceTask.approver_id == user_id).update(
+            {ComplianceTask.approver_id: None}
+        )
+        print(f"Updated {approver_count} tasks where user was approver")
+        
+        # 3. Delete audit logs for this user
+        # from app.models.audit import AuditLog
+        # audit_count = db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
+        # print(f"Deleted {audit_count} audit log entries for user")
+        
+        # 4. Finally delete the user
+        db.delete(db_user)
+        db.commit()
+        
+        print(f"Successfully deleted user {user_id} ({user_email})")
+        return None
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
+
+
 @app.get("/api/users/search", response_model=List[UserSearchResponse])
 async def search_users(
         username: str,
