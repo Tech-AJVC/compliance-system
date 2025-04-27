@@ -333,7 +333,7 @@ async def delete_document(
     Delete a document (only for Admin users).
     """
     # Only Admin users can delete documents
-    if current_user.get('role') != "Admin":
+    if current_user.get('role') not in ["Admin", "Fund Manager", "Compliance Officer"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Admin users can delete documents"

@@ -21,13 +21,30 @@ def log_activity(
     Returns:
         The created AuditLog instance
     """
-    audit_log = AuditLog(
-        user_id=user_id,
-        activity=activity,
-        details=details
-    )
-    
-    db.add(audit_log)
-    db.commit()
-    db.refresh(audit_log)
-    return audit_log
+    try:
+        # Ensure user_id is either None or a proper UUID object
+        parsed_user_id = None
+        if user_id is not None:
+            if isinstance(user_id, str):
+                try:
+                    parsed_user_id = uuid.UUID(user_id)
+                except ValueError:
+                    print(f"Warning: Invalid UUID string: {user_id}")
+            else:
+                parsed_user_id = user_id
+                
+        audit_log = AuditLog(
+            user_id=parsed_user_id,
+            activity=activity,
+            details=details
+        )
+        
+        db.add(audit_log)
+        db.commit()
+        db.refresh(audit_log)
+        return audit_log
+    except Exception as e:
+        db.rollback()
+        print(f"Error logging activity: {str(e)}")
+        # Return None instead of raising an exception to prevent disrupting main functions
+        return None
