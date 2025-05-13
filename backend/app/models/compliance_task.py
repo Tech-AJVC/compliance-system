@@ -18,6 +18,7 @@ class TaskCategory(str, enum.Enum):
     RBI = "RBI"
     IT_GST = "IT/GST"
     LP = "LP"
+    MCA = "MCA"
     OTHER = "Other"
 
 class ComplianceTask(Base):

@@ -17,6 +17,7 @@ class TaskCategory(str, Enum):
     RBI = "RBI"
     IT_GST = "IT/GST"
     LP = "LP"
+    MCA = "MCA"
     OTHER = "Other"
 
 class DocumentInfo(BaseModel):
