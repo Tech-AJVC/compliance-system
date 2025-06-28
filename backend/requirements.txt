@@ -24,3 +24,4 @@ googleapis-common-protos==1.69.1
 PyJWT==2.10.1
 requests==2.32.3
 pandas==2.1.4
+marker-pdf==0.1.3

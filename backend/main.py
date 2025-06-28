@@ -18,6 +18,9 @@ from app.api.reports import router as reports_router
 from app.api.lp import router as lp_router
 from app.api.compliance import router as compliance_router
 from app.api.audit import router as audit_router
+from app.api.entities import router as entities_router
+from app.api.funds import router as funds_router
+from app.api.fund_entities import router as fund_entities_router
 from app.utils.audit import log_activity
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
@@ -100,6 +103,9 @@ app.include_router(reports_router, prefix="/api/reports", tags=["reports"])
 app.include_router(lp_router, prefix="/api/lps", tags=["lps"])
 app.include_router(compliance_router, prefix="/api/compliance", tags=["compliance"])
 app.include_router(audit_router, prefix="/api/audit", tags=["audit"])
+app.include_router(entities_router, prefix="/api", tags=["entities"])
+app.include_router(funds_router, prefix="/api", tags=["funds"])
+app.include_router(fund_entities_router, prefix="/api", tags=["fund-entities"])
 
 # Create uploads directory if it doesn't exist
 os.makedirs("uploads", exist_ok=True)

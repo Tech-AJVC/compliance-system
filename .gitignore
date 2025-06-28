@@ -24,3 +24,4 @@ env/
 
 # Local configuration
 .env
+node_modules

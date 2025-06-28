@@ -9,6 +9,7 @@ class LPDetails(Base):
     __tablename__ = "lp_details"
 
     lp_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    fund_id = Column(ForeignKey("fund_details.fund_id"), nullable=True)  # Added fund reference
     lp_name = Column(String, nullable=False)
     mobile_no = Column(String(20))
     email = Column(String, nullable=False)
@@ -34,6 +35,7 @@ class LPDetails(Base):
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
     # Relationships
+    fund = relationship("FundDetails", back_populates="lp_details")
     drawdowns = relationship("LPDrawdown", back_populates="lp")
     compliance_records = relationship("ComplianceRecord", back_populates="lp")
 

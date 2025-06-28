@@ -13,6 +13,7 @@ class LPStatus(str, Enum):
     UNDER_REVIEW = "Under Review"
     
 class LPDetailsBase(BaseModel):
+    fund_id: Optional[int] = None
     lp_name: str
     mobile_no: Optional[str] = None
     email: EmailStr
@@ -39,6 +40,7 @@ class LPDetailsCreate(LPDetailsBase):
     pass
 
 class LPDetailsUpdate(LPDetailsBase):
+    fund_id: Optional[int] = None
     lp_name: Optional[str] = None
     email: Optional[EmailStr] = None
 

@@ -9,6 +9,7 @@ class LPDrawdown(Base):
     __tablename__ = "lp_drawdowns"
 
     drawdown_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    fund_id = Column(ForeignKey("fund_details.fund_id"), nullable=True)  # Added fund reference
     lp_id = Column(UUID(as_uuid=True), ForeignKey("lp_details.lp_id"), nullable=False)
     drawdown_date = Column(Date, nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)
@@ -22,6 +23,7 @@ class LPDrawdown(Base):
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
     # Relationships
+    fund = relationship("FundDetails", back_populates="lp_drawdowns")
     lp = relationship("LPDetails", back_populates="drawdowns")
 
     def __init__(self, **kwargs):
