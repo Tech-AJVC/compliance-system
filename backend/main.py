@@ -203,12 +203,12 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db), specific_
         db.commit()
         db.refresh(db_user)
 
-        # gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
-        # f"A new user has been created:\n\n"
-        # f"Name: {db_user.name}\n"
-        # f"Email: {db_user.email}\n"
-        # f"Role: {db_user.role}\n"
-        # f"Password: {user.password}")
+        gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
+        f"A new user has been created:\n\n"
+        f"Name: {db_user.name}\n"
+        f"Email: {db_user.email}\n"
+        f"Role: {db_user.role}\n"
+        f"Password: {user.password}")
 
         return db_user
 
