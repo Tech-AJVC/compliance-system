@@ -1,5 +1,14 @@
 FROM python:3.9-slim
 
+# Install system dependencies including QPDF
+RUN apt-get update && apt-get install -y \
+    qpdf \
+    libqpdf-dev \
+    pkg-config \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .
