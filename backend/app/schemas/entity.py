@@ -121,3 +121,10 @@ class EntitySearch(BaseModel):
     entity_type: EntityType
 
     model_config = ConfigDict(from_attributes=True) 
+
+# Paginated response schema for GET all entities
+class EntityListResponse(BaseModel):
+    data: List[EntityResponse]
+    total: int
+    
+    model_config = ConfigDict(from_attributes=True) 

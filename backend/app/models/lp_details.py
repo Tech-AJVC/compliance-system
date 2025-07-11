@@ -14,6 +14,7 @@ class LPDetails(Base):
     mobile_no = Column(String(20))
     email = Column(String, nullable=False)
     address = Column(Text)
+    email_for_drawdowns = Column(String(255), nullable=True)  # Added from UC-LP-4
     nominee = Column(String)
     pan = Column(String(20))
     dob = Column(Date)
@@ -30,13 +31,15 @@ class LPDetails(Base):
     citizenship = Column(String(50))
     type = Column(String(50))  # Individual, Corporate, etc.
     geography = Column(String(50))
-    status = Column(String(20), default="Waiting For KYC")
+    kyc_status = Column(String(50), nullable=True)  # Added from UC-LP-4
+    status = Column(String(50), default="Waiting for KYC")
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
     # Relationships
     fund = relationship("FundDetails", back_populates="lp_details")
     drawdowns = relationship("LPDrawdown", back_populates="lp")
+    lp_documents = relationship("LPDocument", back_populates="lp")
     compliance_records = relationship("ComplianceRecord", back_populates="lp")
 
     def __init__(self, **kwargs):
