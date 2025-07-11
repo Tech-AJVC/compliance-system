@@ -286,6 +286,24 @@ Indexes
 • (startup_brand) UNIQUE
 • (legal_entity_name) UNIQUE
 
+### PORTFOLIO_COMPANIES Updates
+
+```sql
+ALTER TABLE PORTFOLIO_COMPANIES ADD COLUMN correspondence_email VARCHAR(255);
+```
+
+### PORTFOLIO_DOCUMENTS (Missing Table)
+
+```sql
+CREATE TABLE PORTFOLIO_DOCUMENTS (
+    portfolio_document_id INT PRIMARY KEY,
+    company_id INT REFERENCES PORTFOLIO_COMPANIES(company_id),
+    document_id INT REFERENCES DOCUMENTS(document_id),
+    document_type VARCHAR(50), -- SHA, Term_Sheet, EC, Valuation_Report, etc.
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
 ## PROCESS SECTION - PORTFOLIO DATABASE CREATION
 
 This process handles the registration and onboarding of portfolio companies by extracting information from various documents and combining it with UI inputs.
@@ -310,50 +328,50 @@ This process handles the registration and onboarding of portfolio companies by e
 - **Formula**: N/A
 - **DB vs PDF Analysis**: ✅ Direct UI input stored in PORTFOLIO_COMPANIES table
 
-### Subprocess: Investment Information (from SSA/UI)
+### Subprocess: Investment Information (from UI)
 
 - **Output**: Funding (Excel)
-- **Input Source**: SSA/UI for Portfolio
+- **Input Source**: UI for Portfolio
 - **Input Format**: PDF
 - **Transformation**: Direct
 - **Input Field**: Funding Amount
 - **Formula**: N/A
 - **DB vs PDF Analysis**: ✅ Store in PORTFOLIO_INVESTMENTS table
 
-### Subprocess: Term Sheet Information (from Term Sheet/UI)
+### Subprocess: Term Sheet Information (from UI)
 
 - **Output**: Date of Signing Termsheet (Excel)
-- **Input Source**: Termsheet/UI for Portfolio
+- **Input Source**: UI for Portfolio
 - **Input Format**: PDF
 - **Transformation**: Direct
 - **Input Field**: Date of Signing
 - **Formula**: N/A
 - **DB vs PDF Analysis**: ✅ Store in PORTFOLIO_INVESTMENTS table
 
-### Subprocess: Funding Transaction Information (from Account Statement/UI)
+### Subprocess: Funding Transaction Information (UI)
 
 - **Output**: Date of Funding Company (Excel)
-- **Input Source**: Account Statement/UI for Portfolio
+- **Input Source**: UI for Portfolio
 - **Input Format**: PDF
 - **Transformation**: Direct
 - **Input Field**: Transaction Date
 - **Formula**: N/A
-- **DB vs PDF Analysis**: ⚠️ Account statement extraction needed, but should evaluate after reconciliation is done. May extract entity from account statement description if possible
+- **DB vs PDF Analysis**: ✅ Use UI
 
-### Subprocess: Employment Contract Information (from Employment Agreement/UI)
+### Subprocess: Employment Contract Information (from UI)
 
 - **Output**: Date of Signing EC (Excel)
-- **Input Source**: Employment Agreement/UI for Portfolio
+- **Input Source**: UI for Portfolio
 - **Input Format**: PDF
 - **Transformation**: Direct
 - **Input Field**: Date of Signing
 - **Formula**: N/A
 - **DB vs PDF Analysis**: ✅ Store in PORTFOLIO_INVESTMENTS table
 
-### Subprocess: Valuation Information (from Valuation Report/UI)
+### Subprocess: Valuation Information (from UI)
 
 - **Output**: Latest Valuation, Date of Valuation (Excel)
-- **Input Source**: Valuation Report/UI for Portfolio
+- **Input Source**: UI for Portfolio
 - **Input Format**: PDF
 - **Transformation**: Direct
 - **Input Field**: Valuation Amount, Valuation Date
@@ -383,11 +401,6 @@ This process handles the registration and onboarding of portfolio companies by e
 ### Document Processing Priority:
 
 1. **SHA (Shareholders Agreement)**: Company details, founders, address
-2. **Term Sheet**: Investment terms, signing dates
-3. **SSA (Subscription and Shareholders Agreement)**: Funding amounts
-4. **Employment Agreement**: Employment contract dates
-5. **Valuation Report**: Latest valuations and dates
-6. **Account Statement**: Funding transaction dates (lower priority)
 
 ### Portfolio Database Structure:
 
@@ -417,24 +430,6 @@ This process handles the registration and onboarding of portfolio companies by e
 
 _Status: draft._
 
-### PORTFOLIO_COMPANIES Updates
-
-```sql
-ALTER TABLE PORTFOLIO_COMPANIES ADD COLUMN correspondence_email VARCHAR(255);
-```
-
-### PORTFOLIO_DOCUMENTS (Missing Table)
-
-```sql
-CREATE TABLE PORTFOLIO_DOCUMENTS (
-    portfolio_document_id INT PRIMARY KEY,
-    company_id INT REFERENCES PORTFOLIO_COMPANIES(company_id),
-    document_id INT REFERENCES DOCUMENTS(document_id),
-    document_type VARCHAR(50), -- SHA, Term_Sheet, EC, Valuation_Report, etc.
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
 ## MISSING API ENDPOINTS
 
 ### PORTFOLIO DOCUMENT MANAGEMENT (Critical Missing)
@@ -451,13 +446,6 @@ JSON
 "file_path": "https://drive.google.com/file/d/xyz",
 "uploaded_at": "2025-05-08T09:14:11Z"
 }]
-
-POST /portfolio-companies/{company_id}/documents
-JSON
-{
-"document_id": 250,
-"document_type": "Term_Sheet"
-}
 
 DELETE /portfolio-companies/{company_id}/documents/{portfolio_document_id}
 
@@ -570,10 +558,6 @@ This workplan details the implementation of Portfolio Update functionality to ma
 **Tasks**:
 
 - [ ] Implement SHA (Shareholders Agreement) parser
-- [ ] Create Term Sheet parser
-- [ ] Add SSA (Subscription and Shareholders Agreement) parser
-- [ ] Implement Employment Agreement parser
-- [ ] Create Valuation Report parser
 - [ ] Add data extraction validation and error handling
 - [ ] Store extracted data with confidence scores
 
@@ -587,25 +571,7 @@ This workplan details the implementation of Portfolio Update functionality to ma
 
 - [ ] Extract company information from SHA documents
 - [ ] Parse founder details from legal documents
-- [ ] Extract investment terms from Term Sheets
-- [ ] Parse funding amounts from SSA documents
-- [ ] Extract valuation data from reports
 - [ ] Implement data validation and normalization
-- [ ] Handle multiple document sources for same data
-
-### 2.3 Account Statement Integration (MEDIUM PRIORITY)
-
-**File**: `backend/app/services/portfolio_account_processor.py` (new file)
-**Dependencies**: Bank transaction models, Portfolio models
-**Estimated Time**: 2 days
-
-**Tasks**:
-
-- [ ] Extract funding transaction dates from account statements
-- [ ] Match transactions to portfolio companies
-- [ ] Validate funding amounts against investment records
-- [ ] Handle transaction reconciliation
-- [ ] Store transaction-to-investment mappings
 
 ## Phase 3: API Implementation
 
@@ -683,56 +649,11 @@ This workplan details the implementation of Portfolio Update functionality to ma
 **Tasks**:
 
 - [ ] Create portfolio company onboarding workflow
-- [ ] Implement investment approval workflow
 - [ ] Add document processing workflow
-- [ ] Create valuation update workflow
 - [ ] Implement notification system for workflow events
 - [ ] Add compliance checking and alerts
 
-### 4.3 Portfolio Reporting Service (MEDIUM PRIORITY)
-
-**File**: `backend/app/services/portfolio_reporting.py` (new file)
-**Dependencies**: Portfolio models, reporting templates
-**Estimated Time**: 2 days
-
-**Tasks**:
-
-- [ ] Generate portfolio performance reports
-- [ ] Create investment summary reports
-- [ ] Generate regulatory compliance reports
-- [ ] Create valuation reports
-- [ ] Implement report scheduling and distribution
-- [ ] Add report customization capabilities
-
 ## Phase 5: Advanced Features
-
-### 5.1 Portfolio Analytics Service (MEDIUM PRIORITY)
-
-**File**: `backend/app/services/portfolio_analytics.py` (new file)
-**Dependencies**: Portfolio models, external data sources
-**Estimated Time**: 3 days
-
-**Tasks**:
-
-- [ ] Calculate portfolio performance metrics
-- [ ] Implement sector-wise analysis
-- [ ] Create investment trend analysis
-- [ ] Add valuation tracking and alerts
-- [ ] Implement benchmark comparisons
-- [ ] Create predictive analytics for portfolio performance
-
-### 5.2 Portfolio Dashboard API (MEDIUM PRIORITY)
-
-**File**: `backend/app/api/portfolio_dashboard.py` (new file)
-**Dependencies**: Analytics service
-**Estimated Time**: 2 days
-
-**Endpoints to Implement**:
-
-- [ ] `GET /portfolio-dashboard/summary` - Overall portfolio summary
-- [ ] `GET /portfolio-dashboard/performance` - Portfolio performance metrics
-- [ ] `GET /portfolio-dashboard/sector-analysis` - Sector-wise breakdown
-- [ ] `GET /portfolio-dashboard/valuations` - Valuation trends
 
 ### 5.3 Portfolio Compliance Service (MEDIUM PRIORITY)
 
