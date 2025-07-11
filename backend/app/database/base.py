@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # Use localhost since we can see PostgreSQL running on port 5432
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://vccrm:vccrm@localhost:5432/vccrm")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://vccrm:vccrm@localhost:5433/vccrm")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

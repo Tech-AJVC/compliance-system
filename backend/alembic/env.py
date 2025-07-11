@@ -8,7 +8,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database.base import Base
-from app.models.user import User
 
 config = context.config
 
@@ -18,7 +17,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 def get_url():
-    return os.getenv("DATABASE_URL", "postgresql://vccrm:vccrm@localhost:5432/vccrm")
+    return os.getenv("DATABASE_URL", "postgresql://vccrm:vccrm@localhost:5433/vccrm")
 
 def run_migrations_offline() -> None:
     url = get_url()
