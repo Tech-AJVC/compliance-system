@@ -28,7 +28,7 @@ DOCUMENT_KEYWORDS = {
 # LP status values
 LP_STATUS = {
     "WAITING_FOR_KYC": "Waiting for KYC",
-    "CA_CML_PENDING": "Contribution Agreement/CML Pending", 
+    "CML_PENDING": "CML Pending", 
     "ACTIVE": "Active"
 }
 
