@@ -32,15 +32,14 @@
 
 #### Trigger
 
-- UI update LP screen add input fields for bank_ifsc, bank_account_no, invested_fund_id, email_for_drawdowns
+- UI update LP screen add input fields for invested_fund_id, email_for_drawdowns
 
 #### Behaviour
 
-- Read LP details from KYC, CA, CML, All Drawdowns uploaded
-- Store all the KYC, CA, CML, All Drawdowns in doc repository against the LP Id
-- Sum of all Drawdowns to get the total drawdown amount
-- Populate Excel allotment template with all statutory fields (ISIN, DP-ID, etc.).
-- Save the sheet to the Repository
+- Read LP details from KYC, CA, CML uploaded
+- Store all the KYC, CA, CML in doc repository against the LP Id
+- Populate DB with all statutory fields (ISIN, DP-ID, etc.) from the documents.
+- Save the DB to LP Details
 - Email the LP and Fund Manager that units have been allotted
 - Record one audit-log entry for the LP Update
 
@@ -118,18 +117,33 @@
 - Use Google Drive util for doc upload.
 - AuthZ: only Compliance & Admin.
 
-DB Schema
-───────────────────────────── 7. LP_DETAILS (+ delta)
+DB Schema 7. LP_DETAILS (+ delta)
 ─────────────────────────────
-• bank_ifsc: VARCHAR(20) NULL
-• bank_account_no: VARCHAR(50) NULL -- needed for recon
 • invested_fund_id: INT
 • email_for_drawdowns: VARCHAR(255) NULL
-
-• total_drawdown: DECIMAL NULL
-
-• kyc_status: VARCHAR(50) NULL
+• kyc_status: VARCHAR(50) NULL # Two values "Done" or "Pending"
 (Index added on pan, email_for_drawdowns)
+
+## MISSING DATABASE SCHEMA
+
+### LP_DOCUMENTS (Critical Missing Table)
+
+```sql
+CREATE TABLE LP_DOCUMENTS (
+    lp_document_id INT PRIMARY KEY,
+    lp_id INT REFERENCES LP_DETAILS(lp_id),
+    document_id INT REFERENCES DOCUMENTS(document_id),
+    document_type VARCHAR(50), -- KYC, CA, CML, Drawdown_Notice, etc.
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### LP_DETAILS Updates for Status Management
+
+```sql
+ Existing status column DEFAULT 'Waiting for KYC';
+-- Possible values: 'Waiting for KYC', 'Contribution Agreement/CML Pending','Active'
+```
 
 API's
 
@@ -163,39 +177,14 @@ JSON
 "lp_id": 101,
 "lp_name": "Main Street Capital",
 "email_for_drawdowns": "investor@msc.com",
-"bank_ifsc": "ICIC0003311",
-"bank_account_no": "0031182000344",
 "invested_fund_id": 12,
 "total_drawdown": 1500000.00,
 "remaining_drawdown": 3500000.00,
 "last_drawdown_status": "Drawdown Pending",
-"kyc_status": "Verified",
+"kyc_status": "Done",
 "created_at": "2025-05-03T11:50:10Z",
 "updated_at": "2025-05-03T11:50:10Z"
 }
-
-## MISSING DATABASE SCHEMA
-
-### LP_DOCUMENTS (Critical Missing Table)
-
-```sql
-CREATE TABLE LP_DOCUMENTS (
-    lp_document_id INT PRIMARY KEY,
-    lp_id INT REFERENCES LP_DETAILS(lp_id),
-    document_id INT REFERENCES DOCUMENTS(document_id),
-    document_type VARCHAR(50), -- KYC, CA, CML, Drawdown_Notice, etc.
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-### LP_DETAILS Updates for Status Management
-
-```sql
-ALTER TABLE LP_DETAILS ADD COLUMN overall_status VARCHAR(50) DEFAULT 'Under Review';
--- Possible values: 'Waiting for KYC', 'Under Review', 'Verified', 'Demat Pending', 'Active'
-ALTER TABLE LP_DETAILS ADD COLUMN verification_status VARCHAR(50) DEFAULT 'Pending';
--- Possible values: 'Pending', 'Verified', 'Rejected'
-```
 
 ## MISSING API ENDPOINTS
 
@@ -205,8 +194,7 @@ Resource: /lps/{lp_id}/status
 PATCH /lps/{lp_id}/status
 JSON
 {
-"overall_status": "Verified",
-"verification_status": "Verified",
+"status": "Active",
 "kyc_status": "Done"
 }
 
@@ -241,22 +229,6 @@ JSON
 }
 
 DELETE /lps/{lp_id}/documents/{lp_document_id}
-
-### LP SEARCH AND FILTERING (Missing)
-
-Resource: /lps/search
-GET /lps/search?query=warren&status=Verified&drawdown_status=Pending
-Returns filtered LP results
-JSON
-[{
-"lp_id": 101,
-"lp_name": "Warren Buffet",
-"email": "warren@berkshire.com",
-"overall_status": "Verified",
-"last_drawdown_status": "Pending",
-"commitment_amount": 10000000.00,
-"remaining_drawdown": 9000000.00
-}]
 
 ## PROCESS SECTION - LP DETAILS
 

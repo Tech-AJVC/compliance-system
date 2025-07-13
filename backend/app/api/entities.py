@@ -5,7 +5,7 @@ from typing import List, Optional
 from ..database.base import get_db
 from ..models.entity import Entity
 from ..models.user import User
-from ..schemas.entity import EntityCreate, EntityUpdate, EntityResponse, EntitySearch, EntityType
+from ..schemas.entity import EntityCreate, EntityUpdate, EntityResponse, EntitySearch, EntityType, EntityListResponse
 from ..utils.audit import log_activity
 from ..auth.security import get_current_user
 
@@ -48,7 +48,7 @@ def create_entity(
             raise HTTPException(status_code=400, detail="Entity with this PAN already exists")
         raise HTTPException(status_code=400, detail=f"Error creating entity: {str(e)}")
 
-@router.get("/", response_model=List[EntityResponse])
+@router.get("/", response_model=EntityListResponse)
 def list_entities(
     entity_type: Optional[EntityType] = Query(None, description="Filter by entity type"),
     gst_number: Optional[str] = Query(None, description="Filter by GST number"),
@@ -57,7 +57,7 @@ def list_entities(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List entities with optional filtering"""
+    """List entities with optional filtering and total count"""
     query = db.query(Entity)
     
     if entity_type:
@@ -66,8 +66,13 @@ def list_entities(
     if gst_number:
         query = query.filter(Entity.entity_gst_number == gst_number)
     
+    # Get total count with filters applied
+    total = query.count()
+    
+    # Get paginated data
     entities = query.offset(skip).limit(limit).all()
-    return entities
+    
+    return EntityListResponse(data=entities, total=total)
 
 @router.get("/search", response_model=List[EntitySearch])
 def search_entities(

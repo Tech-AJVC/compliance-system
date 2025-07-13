@@ -237,6 +237,22 @@ JSON
 "timestamp": "2025-05-08T09:14:11Z"
 }
 
+### Drawdown LP SEARCH AND FILTERING (Missing)
+
+Resource: /lps/search
+GET /lps/search?query=warren&status=Verified&drawdown_status=Pending
+Returns filtered LP results
+JSON
+[{
+"lp_id": 101,
+"lp_name": "Warren Buffet",
+"email": "warren@berkshire.com",
+"overall_status": "Verified",
+"last_drawdown_status": "Pending",
+"commitment_amount": 10000000.00,
+"remaining_drawdown": 9000000.00
+}]
+
 ### 1.3 UX Extract
 
 > _Figma Frame — Initiate Drawdown Modal_  

@@ -39,6 +39,21 @@ from fastapi.openapi.utils import get_openapi
 import config
 from sqlalchemy import func
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Console output
+        logging.FileHandler('app.log')  # File output
+    ]
+)
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
+logger.info("Starting Compliance System API")
 
 # Get authentication credentials from config
 DOCS_USERNAME = "abhi7"
