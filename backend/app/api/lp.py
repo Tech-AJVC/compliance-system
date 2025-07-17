@@ -627,12 +627,12 @@ async def create_lp(
                     # Send notification email
                     try:
                         logger.info("Sending welcome email to new user")
-                        # gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
-                        #                  f"A new user has been created:\n\n"
-                        #                  f"Name: {new_lp.lp_name}\n"
-                        #                  f"Email: {new_lp.email}\n"
-                        #                  f"Role: LP\n"
-                        #                  f"Password: {random_password}")
+                        gmail_send_email("tech@ajuniorvc.com", db_user.email, "User Created Notification",
+                                         f"A new user has been created:\n\n"
+                                         f"Name: {new_lp.lp_name}\n"
+                                         f"Email: {new_lp.email}\n"
+                                         f"Role: LP\n"
+                                         f"Password: {random_password}")
                         logger.info("Welcome email sent successfully")
                     except Exception as email_err:
                         logger.error(f"Error sending welcome email: {str(email_err)}")
