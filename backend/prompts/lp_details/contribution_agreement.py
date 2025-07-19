@@ -136,6 +136,7 @@ As required under **Clause 19.2** of the Agreement, the contact details of the C
 - Consider variations in document format and presentation when identifying sections.
 - Ensure every field specified in the JSON structure is included in the output, using empty strings for any missing data.
 - Account for potential multiple lines or formatting issues that might obscure data extraction.
+- If some values are not found, just say "Not found"
 """
 
 contribution_agg_user_prompt = """Given below is the text of Contribution Agreement from which you need to extract these fields

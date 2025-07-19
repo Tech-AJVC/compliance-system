@@ -6,7 +6,7 @@ The fields to be extracted are:
 - Depository mentioned as national securities depository limited in the document but mentioned as NSDL in the JSON output
 - DOB (Date of Birth) mentioned as Sole/First Holder DOB
 - DOI (Date of Issuance) mentioned as business date in the CML
-- DPID (Depository Participant ID)
+- DPID (Depository Participant ID) usually mentioned as starting with IN (ex: IN305000). If not mentioned just say "Not found"
 - PAN (Permanent Account Number)
 - Type
 - CLID
@@ -72,6 +72,7 @@ The output should be a JSON object with each field as a key and the extracted in
 - Ensure consistency in field extraction, especially for repeated fields.
 - Consider variations in field naming or spelling differences that may be present in the document.
 - For numeric or count fields, ensure numerical accuracy.
+- If some values are not found, just say "Not found"
 """
 
 cml_user_prompt = """Given below is the text of CML from which you need to extract these fields
