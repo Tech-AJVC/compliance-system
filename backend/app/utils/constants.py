@@ -6,7 +6,8 @@ Constants for LP document processing and page extraction
 DOCUMENT_PAGE_RANGES = {
     "CONTRIBUTION_AGREEMENT": [4, 62, 63],  # Pages to extract from Contribution Agreement
     "CML": [0,1],  # Pages to extract from Client Master List
-    "KYC": []  # KYC documents don't need specific page extraction
+    "KYC": [],  # KYC documents don't need specific page extraction
+    "SHA": [1, 2]  # SHA documents don't need specific page extraction
 }
 
 # Document types for identification
@@ -14,7 +15,8 @@ DOCUMENT_TYPES = {
     "KYC": "KYC",
     "CONTRIBUTION_AGREEMENT": "Contribution Agreement", 
     "CML": "CML",
-    "DRAWDOWN_NOTICE": "Drawdown Notice"
+    "DRAWDOWN_NOTICE": "Drawdown Notice",
+    "SHA": "SHA"
 }
 
 # Document type identification keywords
@@ -22,7 +24,8 @@ DOCUMENT_KEYWORDS = {
     "KYC": ["kyc", "know your customer", "customer due diligence"],
     "CONTRIBUTION_AGREEMENT": ["contribution agreement", "subscription agreement", "capital commitment", "CA"],
     "CML": ["client master list", "cml", "master list"],
-    "DRAWDOWN_NOTICE": ["drawdown notice", "capital call", "drawdown", "notice", "funding notice"]
+    "DRAWDOWN_NOTICE": ["drawdown notice", "capital call", "drawdown", "notice", "funding notice"],
+    "SHA": ["shareholders agreement", "sha", "share subscription agreement", "shareholder agreement"]
 }
 
 # LP status values
