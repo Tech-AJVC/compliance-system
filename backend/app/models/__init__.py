@@ -8,6 +8,10 @@ from .audit_log import AuditLog
 from .entity import Entity
 from .fund_details import FundDetails
 from .fund_entity import FundEntity
+from .portfolio_company import PortfolioCompany
+from .portfolio_founder import PortfolioFounder
+from .portfolio_investment import PortfolioInvestment
+from .portfolio_document import PortfolioDocument
 
 __all__ = [
     "User",
@@ -19,5 +23,9 @@ __all__ = [
     "AuditLog",
     "Entity",
     "FundDetails",
-    "FundEntity"
+    "FundEntity",
+    "PortfolioCompany",
+    "PortfolioFounder", 
+    "PortfolioInvestment",
+    "PortfolioDocument"
 ]

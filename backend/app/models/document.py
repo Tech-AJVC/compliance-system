@@ -22,6 +22,7 @@ class DocumentCategory(str, enum.Enum):
     INFORMATION = "Information"
     CML = "CML"
     DRAWDOWN_NOTICE = "Drawdown Notice"
+    SHA = "SHA"
     OTHER = "Other"
 
 
