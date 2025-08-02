@@ -322,6 +322,21 @@ JSON
 - Validate regulatory compliance fields
 - Generate fund documentation templates
 
+#### Enhanced Fund Creation (from Figma)
+
+##### Multi-Entity Fund Registration
+- **Entity Management Section**: "Add any other entities that you want to link to the fund"
+- **Entity Types Available**:
+  - Manager, Sponsor, Trust, Custodian, RTA, Trustee, Auditor, 
+  - Merchant Banker, Valuer, Legal, Compliance Officer, Investment Officer
+
+##### Fund Details Form Structure
+- **Scheme Details Section**: Name, Status, Structure, PAN
+- **Date Management**: Filing dates, communication dates, launch dates
+- **Financial Information**: Corpus, target size, greenshoe option
+- **Bank Details**: Complete bank information with contact details
+- **AIF Details**: Registration numbers, legal structure, category
+
 ---
 
 ### Figma UI Screen Inputs

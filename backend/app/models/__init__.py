@@ -2,7 +2,7 @@ from .user import User
 from .compliance_task import ComplianceTask
 from .document import Document
 from .lp_details import LPDetails
-from .lp_drawdowns import LPDrawdown
+from .lp_drawdowns import LPDrawdown, DrawdownNotice
 from .compliance_records import ComplianceRecord
 from .audit_log import AuditLog
 from .entity import Entity

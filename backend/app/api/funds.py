@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from ..database.base import get_db
 from ..models.fund_details import FundDetails
 from ..models.fund_entity import FundEntity
@@ -15,6 +15,52 @@ from ..auth.security import get_current_user
 
 router = APIRouter(prefix="/funds", tags=["funds"])
 
+def validate_fund_uniqueness(db: Session, fund_data: FundCreate) -> Optional[Dict[str, Any]]:
+    """
+    Validate that fund fields are unique before creation.
+    Returns error dict if validation fails, None if all validations pass.
+    """
+    # Check scheme_name
+    if fund_data.scheme_name:
+        existing_fund = db.query(FundDetails).filter(
+            FundDetails.scheme_name == fund_data.scheme_name
+        ).first()
+        if existing_fund:
+            return {
+                "error_type": "validation_error",
+                "field": "scheme_name",
+                "value": fund_data.scheme_name,
+                "message": f"A fund with scheme name '{fund_data.scheme_name}' already exists"
+            }
+    
+    # Check aif_pan
+    if fund_data.aif_pan:
+        existing_fund = db.query(FundDetails).filter(
+            FundDetails.aif_pan == fund_data.aif_pan
+        ).first()
+        if existing_fund:
+            return {
+                "error_type": "validation_error",
+                "field": "aif_pan",
+                "value": fund_data.aif_pan,
+                "message": f"A fund with AIF PAN '{fund_data.aif_pan}' already exists"
+            }
+    
+    # Check bank_account_no
+    if fund_data.bank_account_no:
+        existing_fund = db.query(FundDetails).filter(
+            FundDetails.bank_account_no == fund_data.bank_account_no
+        ).first()
+        if existing_fund:
+            return {
+                "error_type": "validation_error",
+                "field": "bank_account_no",
+                "value": fund_data.bank_account_no,
+                "message": f"A fund with bank account number '{fund_data.bank_account_no}' already exists"
+            }
+    
+    return None
+
 @router.post("/", response_model=FundResponse, status_code=201)
 def create_fund(
     fund_data: FundCreate,
@@ -23,6 +69,11 @@ def create_fund(
 ):
     """Create a new fund"""
     try:
+        # Validate fund uniqueness before creation
+        validation_error = validate_fund_uniqueness(db, fund_data)
+        if validation_error:
+            raise HTTPException(status_code=400, detail=validation_error)
+        
         # Create new fund
         db_fund = FundDetails(**fund_data.model_dump())
         db.add(db_fund)
@@ -46,15 +97,11 @@ def create_fund(
         
         return db_fund
         
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        if "duplicate key" in str(e).lower():
-            if "scheme_name" in str(e):
-                raise HTTPException(status_code=400, detail="Fund with this scheme name already exists")
-            elif "aif_pan" in str(e):
-                raise HTTPException(status_code=400, detail="Fund with this AIF PAN already exists")
-            elif "bank_account_no" in str(e):
-                raise HTTPException(status_code=400, detail="Fund with this bank account number already exists")
         raise HTTPException(status_code=400, detail=f"Error creating fund: {str(e)}")
 
 @router.get("/", response_model=List[FundResponse])
