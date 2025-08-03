@@ -264,7 +264,7 @@ def capital_call_reminder():
                 <div class="footer">
                     <p><strong>AJVC Compliance Automation System</strong></p>
                     <p>This automated reminder is sent on the 7th of each quarter (Jan, Apr, Jul, Oct).</p>
-                    <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                    <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')} UTC </p>
                 </div>
             </div>
         </body>
@@ -489,7 +489,7 @@ def task_due_date_reminder():
                     <div class="footer">
                         <p><strong>AJVC Compliance Automation System</strong></p>
                         <p>This is an automated reminder sent 3 days before task due dates.</p>
-                        <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                        <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')} UTC</p>
                     </div>
                 </div>
             </body>
