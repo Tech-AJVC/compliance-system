@@ -1,5 +1,4 @@
 # Dockerfile for Compliance Reminder Cron Job
-# Build from deployments/ directory to access all backend files
 FROM python:3.12-slim as builder
 
 WORKDIR /app

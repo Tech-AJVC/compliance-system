@@ -201,7 +201,7 @@ def capital_call_reminder():
                 .fund-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-radius: 6px; overflow: hidden; }}
                 .fund-table th {{ background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 15px; text-align: left; font-weight: bold; color: #334155; border-bottom: 2px solid #059669; }}
                 .alert-box {{ background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 10px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1); }}
-                .cta-button {{ display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; box-shadow: 0 3px 12px rgba(5, 150, 105, 0.3); transition: transform 0.2s ease; }}
+                .cta-button {{ display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; box-shadow: 0 3px 12px rgba(16, 185, 129, 0.3); transition: transform 0.2s ease; }}
                 .cta-button:hover {{ transform: translateY(-1px); }}
                 .footer {{ background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 20px; text-align: center; color: #64748b; font-size: 12px; }}
                 .quarter-badge {{ background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #059669; padding: 8px 16px; border-radius: 20px; font-weight: bold; display: inline-block; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.1); }}
@@ -264,7 +264,7 @@ def capital_call_reminder():
                 <div class="footer">
                     <p><strong>AJVC Compliance Automation System</strong></p>
                     <p>This automated reminder is sent on the 7th of each quarter (Jan, Apr, Jul, Oct).</p>
-                    <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                    <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')} UTC </p>
                 </div>
             </div>
         </body>
@@ -434,7 +434,7 @@ def task_due_date_reminder():
                     .task-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-radius: 6px; overflow: hidden; }}
                     .task-table th {{ background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 15px; text-align: left; font-weight: bold; color: #334155; border-bottom: 2px solid #047857; }}
                     .summary-box {{ background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%); border: 1px solid #ea580c; border-radius: 10px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1); }}
-                    .cta-button {{ display: inline-block; background: linear-gradient(135deg, #047857 0%, #059669 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; box-shadow: 0 3px 12px rgba(4, 120, 87, 0.3); transition: transform 0.2s ease; }}
+                    .cta-button {{ display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; box-shadow: 0 3px 12px rgba(16, 185, 129, 0.3); transition: transform 0.2s ease; }}
                     .cta-button:hover {{ transform: translateY(-1px); }}
                     .footer {{ background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 20px; text-align: center; color: #64748b; font-size: 12px; }}
                 </style>
@@ -489,7 +489,7 @@ def task_due_date_reminder():
                     <div class="footer">
                         <p><strong>AJVC Compliance Automation System</strong></p>
                         <p>This is an automated reminder sent 3 days before task due dates.</p>
-                        <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                        <p>Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')} UTC</p>
                     </div>
                 </div>
             </body>
