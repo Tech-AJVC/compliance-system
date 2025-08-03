@@ -49,7 +49,56 @@ async def parse_portfolio_data(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid portfolio data: {str(e)}")
 
-# Combined Portfolio Onboard Endpoint
+def validate_portfolio_uniqueness(db: Session, portfolio_data: PortfolioOnboardingInput, extracted_fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Validate that portfolio company fields are unique before creation.
+    Returns error dict if validation fails, None if all validations pass.
+    """
+    # Check startup_brand
+    if portfolio_data.startup_brand:
+        existing_company = db.query(PortfolioCompany).filter(
+            PortfolioCompany.startup_brand == portfolio_data.startup_brand
+        ).first()
+        if existing_company:
+            return {
+                "error_type": "validation_error",
+                "field": "startup_brand",
+                "value": portfolio_data.startup_brand,
+                "message": f"A portfolio company with startup brand '{portfolio_data.startup_brand}' already exists"
+            }
+    
+    # Check company_name (from extracted fields)
+    company_name = extracted_fields.get("company_name")
+    if company_name:
+        existing_company = db.query(PortfolioCompany).filter(
+            PortfolioCompany.company_name == company_name
+        ).first()
+        if existing_company:
+            return {
+                "error_type": "validation_error",
+                "field": "company_name",
+                "value": company_name,
+                "message": f"A portfolio company with company name '{company_name}' already exists"
+            }
+    
+    # Check founder emails
+    if portfolio_data.founders:
+        for founder_name, founder_info in portfolio_data.founders.items():
+            founder_email = founder_info.get("email")
+            if founder_email:
+                existing_founder = db.query(PortfolioFounder).filter(
+                    PortfolioFounder.founder_email == founder_email
+                ).first()
+                if existing_founder:
+                    return {
+                        "error_type": "validation_error",
+                        "field": "founder_email",
+                        "value": founder_email,
+                        "message": f"A founder with email '{founder_email}' already exists"
+                    }
+    
+    return None
+
 @router.post("/onboard", response_model=PortfolioOnboardResponse, status_code=status.HTTP_201_CREATED)
 async def onboard_portfolio_company(
     # SHA Document upload
@@ -145,6 +194,12 @@ async def onboard_portfolio_company(
             if not portfolio_data.fund_id:
                 logger.error("Missing fund_id")
                 raise HTTPException(status_code=400, detail="fund_id is required")
+            
+            # Validate portfolio uniqueness before creation
+            validation_error = validate_portfolio_uniqueness(db, portfolio_data, extracted_fields)
+            if validation_error:
+                logger.error(f"Portfolio validation failed: {validation_error}")
+                raise HTTPException(status_code=400, detail=validation_error)
             
             # Prepare company data by combining UI input with SHA extracted fields
             company_data_dict = {
@@ -249,22 +304,12 @@ async def onboard_portfolio_company(
             )
     
     except HTTPException:
-        raise
-    except IntegrityError as e:
-        logger.error(f"Database integrity error: {str(e)}")
         db.rollback()
-        if "startup_brand" in str(e):
-            raise HTTPException(status_code=400, detail="Portfolio company with this startup brand already exists")
-        elif "company_name" in str(e):
-            raise HTTPException(status_code=400, detail="Portfolio company with this company name already exists")
-        elif "founder_email" in str(e):
-            raise HTTPException(status_code=400, detail="Founder with this email already exists")
-        else:
-            raise HTTPException(status_code=400, detail="Database constraint violation")
+        raise
     except Exception as e:
         logger.error(f"Unexpected error during portfolio onboarding: {str(e)}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error onboarding portfolio company: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error onboarding portfolio company: {str(e)}")
 
 # Portfolio Companies Individual Management
 

@@ -1,0 +1,19 @@
+# Database and ORM
+sqlalchemy==2.0.27
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+
+# Google APIs for Gmail
+google-api-core==2.24.2
+google-api-python-client==2.164.0
+google-auth==2.38.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
+googleapis-common-protos==1.69.1
+
+# Basic Python utilities  
+requests==2.32.3
+pandas==2.1.4
+
+# FastAPI (required by google_clients_gcp.py)
+fastapi==0.104.1

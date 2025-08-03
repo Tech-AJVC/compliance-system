@@ -26,6 +26,41 @@
 
 > Simple form asking 3 monetary figures + **Generate** button; list page shows generated XML with download link.
 
+### 1.4 Enhanced SEBI Report Form (from Figma)
+
+#### Report Generation Form Fields
+- **Temporary Investments** (required): Currency input with ₹ symbol
+- **Cash in Hand** (required): Currency input with ₹ symbol  
+- **Estimated Expenses** (required): Currency input with ₹ symbol
+
+#### Reports List View
+- **Generate SEBI Report Button**: Primary action button
+- **Search Field**: General search functionality
+- **Table Columns**: Quarter (Q1'25 format), Generated On (date), Document (downloadable XML)
+- **Action Menu**: Three-dot menu for View/Download/Delete operations
+
+#### Integration with Fund Details
+- **Auto-populated Fields**: Pull scheme details, AIF information, financial data
+- **Calculated Fields**: Corpus calculations, commitment totals, investment summaries
+- **Fund Details Section**:
+  - Scheme Name: Ajvc Fund Scheme of Ajvc Trust
+  - Status: Active (green badge)
+  - Registration: AWEOER123
+  - Extension: Extension Permitted
+- **AIF Details Section**:
+  - Fund Name: AJVC Fund
+  - AIF Registration: AAKTA6772D
+  - Registration Number: IN/AIF2/24-25/1578
+  - Structure: Trust
+  - Category: Category II AIF
+- **Financial Information**:
+  - Corpus as on Initial Close: ₹80,000,00,000
+  - Target Fund Size: ₹100,000,00,000
+  - Greenshoe Option: ₹80,000,000
+- **Bank Details**:
+  - Bank: HDFC Bank AJVC
+  - Account Numbers: 123245983274893​2, HDFC090000
+
 ---
 
 ### Use Case

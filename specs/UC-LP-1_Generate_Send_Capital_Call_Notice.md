@@ -30,7 +30,7 @@ _(Please refer to the PDFs in `/docs` for verbatim text; extracts copied below r
 - Create a Drawdown Notice in Excel with calculated and static fields
 - Store the Drawdown Notice fields in the DB
 - Display a preview to the user of the Drawdown Notice for each LP in a paginated format (X sheets)
-- Send individual e-mails to every LP for a capital call and store a copy of the Drawdown Notice in the Document Repository against LP ID
+- Send individual e-mails to every LP for a capital call and store a copy of the Drawdown Notice in the Document Repository against LP ID (DO NOT IMPLEMENT this for now will be done Later)
 - Record one audit-log entry for the Capital Call
 
 ### 1.1 PRD Extract
@@ -68,7 +68,7 @@ _(Please refer to the PDFs in `/docs` for verbatim text; extracts copied below r
 > • forecast_next_quarter: DECIMAL(15,2)  
 > • fund_id: INT
 
-───────────────────────────── 13. DRAWDOWN_NOTICES
+13. DRAWDOWN_NOTICES
 ─────────────────────────────
 • drawdown_id: INT FK→LP_DRAWDOWNS
 • lp_id: INT FK→LP_DETAILS
@@ -258,6 +258,35 @@ JSON
 > _Figma Frame — Initiate Drawdown Modal_  
 > Fields: Notice Date, Due Date, % Drawdown, Expected Amount, Forecast %, LP table (Name, Drawdown, Drawdown so far).  
 > Primary CTA **Send** (enabled when required fields valid).
+
+### 1.4 Enhanced Status Badge System (from Figma)
+
+#### Drawdown Status Progression
+- **Step 1: Notice** - "Sent on 7th January 2025" (completed ✓)
+- **Step 2: Money Transfer** - Shows percentage completion "100% - (100/100) transfers done" or "20% - (20/100) transfers done"
+- **Step 3: Unit Allotment** - Shows allotment status "100% units allotted" or "No units allotted yet"
+- **Step 4: InVi Filing** - "Not yet done" or "Done"
+
+#### Status Badge Variations
+- **Demat Pending** (🔄 yellow badge)
+- **Wire Pending** (🔄 yellow badge) 
+- **Unit Allotment Generated** (🔄 yellow badge)
+- **Allotment Pending** (🔄 yellow badge)
+- **Allotment Done** (✅ green badge)
+- **Drawdown Pending** (🔄 blue badge)
+- **Acceptance Pending** (🔄 yellow badge)
+
+#### Progress Visualization
+- **Quarter Selector**: Dropdown "Q1'25" format with options (Q1'25, Q4'24, Q3'24, Q2'24, Q1'24)
+- **Overall Status**: "Drawdown Status" with primary status badge
+- **Step-by-step Progress**: Visual timeline showing completion status for each phase
+- **Percentage Tracking**: Real-time updates of completion percentages for money transfers and unit allotments
+
+#### Enhanced Drawdown Modal Features
+- **Detailed LP View**: Individual LP drawdown status in paginated format
+- **Drawdown Details Panel**: Shows notice date, due date, percentage drawdown, expected amount, forecasted amount
+- **LP Status Table**: Displays each LP with commitment amount, remaining drawdown, and individual status badges
+- **Edit/Delete Actions**: Three-dot menu options for drawdown management
 
 ---
 

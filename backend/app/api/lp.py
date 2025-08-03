@@ -9,12 +9,11 @@ from pathlib import Path
 import logging
 from app.database.base import get_db
 from app.models.lp_details import LPDetails
-from app.models.lp_drawdowns import LPDrawdown
+
 from app.models.lp_document import LPDocument
 from app.models.document import Document
 from app.schemas.lp import (
     LPDetailsCreate, LPDetailsUpdate, LPDetailsResponse,
-    LPDrawdownCreate, LPDrawdownUpdate, LPDrawdownResponse,
     LPWithDrawdowns, LPDocumentCreate, LPDocumentResponse,
     LPStatusUpdate, LPStatusResponse, DocumentUploadRequest,
     LPListResponse
@@ -951,173 +950,7 @@ async def delete_lp(
     return None
 
 
-# LP Drawdown Endpoints
-@router.post("/drawdowns", response_model=LPDrawdownResponse, status_code=status.HTTP_201_CREATED)
-async def create_drawdown(
-        drawdown_data: LPDrawdownCreate,
-        db: Session = Depends(get_db)
-):
-    """
-    Create a new drawdown record for an LP.
-    """
-    # Check if user has appropriate role
-    check_role(["Fund Manager", "Fund Admin"])
 
-    # Check if LP exists
-    lp = db.query(LPDetails).filter(LPDetails.lp_id == drawdown_data.lp_id).first()
-    if not lp:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="LP not found"
-        )
-
-    # Create new drawdown
-    new_drawdown = LPDrawdown(**drawdown_data.model_dump())
-
-    db.add(new_drawdown)
-    db.commit()
-    db.refresh(new_drawdown)
-
-    # Log the activity
-    try:
-        user = await get_current_user()
-        # Print the current_user dictionary to see what keys are available
-        print(f"Current user: {user}")
-
-        log_activity(
-            db=db,
-            activity="drawdown_created",
-            user_id=uuid.UUID(user.get("sub", "00000000-0000-0000-0000-000000000000")),
-            details=f"Created drawdown for LP: {lp.lp_name}, Amount: {new_drawdown.amount}"
-        )
-    except Exception as e:
-        print(f"Error logging activity: {str(e)}")
-        # Continue even if logging fails
-
-    return new_drawdown
-
-
-@router.get("/drawdowns/list", response_model=List[LPDrawdownResponse])
-async def get_all_drawdowns(
-        lp_id: Optional[uuid.UUID] = None,
-        skip: int = 0,
-        limit: int = 100,
-        db: Session = Depends(get_db)
-):
-    """
-    Get all drawdown records with optional filtering by LP.
-    """
-    print("Getting drawdowns with lp_id:", lp_id)
-    query = db.query(LPDrawdown)
-
-    if lp_id:
-        query = query.filter(LPDrawdown.lp_id == lp_id)
-
-    drawdowns = query.offset(skip).limit(limit).all()
-    return drawdowns
-
-
-@router.get("/drawdowns/{drawdown_id}", response_model=LPDrawdownResponse)
-async def get_drawdown(
-        drawdown_id: uuid.UUID,
-        db: Session = Depends(get_db)
-):
-    """
-    Get a specific drawdown record by ID.
-    """
-    drawdown = db.query(LPDrawdown).filter(LPDrawdown.drawdown_id == drawdown_id).first()
-    if not drawdown:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Drawdown not found"
-        )
-    return drawdown
-
-
-@router.put("/drawdowns/{drawdown_id}", response_model=LPDrawdownResponse)
-async def update_drawdown(
-        drawdown_id: uuid.UUID,
-        drawdown_data: LPDrawdownUpdate,
-        db: Session = Depends(get_db)
-):
-    """
-    Update an existing drawdown record.
-    """
-    # Check if user has appropriate role
-    check_role(["Fund Manager", "Fund Admin"])
-
-    drawdown = db.query(LPDrawdown).filter(LPDrawdown.drawdown_id == drawdown_id).first()
-    if not drawdown:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Drawdown not found"
-        )
-
-    # Update drawdown data
-    update_data = drawdown_data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(drawdown, key, value)
-
-    db.commit()
-    db.refresh(drawdown)
-
-    # Log the activity
-    try:
-        # Print the current_user dictionary to see what keys are available
-        current_user = await get_current_user()
-        print(f"Current user: {current_user}")
-
-        log_activity(
-            db=db,
-            activity="drawdown_updated",
-            user_id=uuid.UUID(current_user.get("sub", "00000000-0000-0000-0000-000000000000")),
-            details=f"Updated drawdown: {drawdown_id}"
-        )
-    except Exception as e:
-        print(f"Error logging activity: {str(e)}")
-        # Continue even if logging fails
-
-    return drawdown
-
-
-@router.delete("/drawdowns/{drawdown_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_drawdown(
-        drawdown_id: uuid.UUID,
-        db: Session = Depends(get_db)
-):
-    """
-    Delete a drawdown record.
-    """
-    # Check if user has appropriate role
-    check_role(["Fund Manager", "Fund Admin"])
-
-    drawdown = db.query(LPDrawdown).filter(LPDrawdown.drawdown_id == drawdown_id).first()
-    if not drawdown:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Drawdown not found"
-        )
-
-    db.delete(drawdown)
-    db.commit()
-
-    # Log the activity
-    try:
-        # Print the current_user dictionary to see what keys are available
-        current_user = await get_current_user()
-        print(f"Current user: {current_user}")
-
-        log_activity(
-            db=db,
-            activity="drawdown_deleted",
-            user_id=uuid.UUID(current_user.get("sub", "00000000-0000-0000-0000-000000000000")),
-            details=f"Deleted drawdown: {drawdown_id}"
-        )
-    except Exception as e:
-        print(f"Error logging activity: {str(e)}")
-        # Continue even if logging fails
-
-    return None
 
 # Helper function for document processing
 async def process_lp_document(

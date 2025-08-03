@@ -26,6 +26,65 @@
 
 > Onboard Company form fields: Startup Name, Registered Name, PAN, ISIN, Funding, Date of Funding, Latest Valuation.
 
+### 1.4 Enhanced Portfolio Management (from Figma)
+
+#### Portfolio Companies List View
+
+- **Onboard Company Button**: Primary action button positioned prominently
+- **Search Field**: General search functionality with "Search..." placeholder
+- **Portfolio Table Columns**:
+  - Name (company name)
+  - Funding (₹ format, e.g., 1,50,000)
+  - Date of Funding (date format)
+  - Latest Valuation (₹ format)
+- **Three-dot Menu**: Action menu for each portfolio company (Edit/Delete options)
+
+#### Onboard Company Form
+
+- **Form Title**: "Onboard Company"
+- **Subtitle**: "Add all relevant company details below"
+- **SHA Upload**: File upload component for SHA document (automatic extraction)
+
+##### Required Fields (UI Input)
+
+**Company Information:**
+- **Startup Name** (required): Text input field
+- **Registered Name** (required): Text input field
+- **Correspondence Email** (required): Email input field
+- **PAN** (required): Text input field with PAN format validation
+- **ISIN** (required): Text input field with ISIN format validation
+- **Sector** (required): Text input field
+- **Product Description** (optional): Text area field
+
+**Investment Information:**
+- **Funding** (required): Currency input field with ₹ symbol
+- **Date of Funding** (required): Date picker field
+- **Date of Signing Term Sheet** (required): Date picker field
+- **Date of Signing EC** (required): Date picker field
+- **Latest Valuation** (required): Currency input field with ₹ symbol
+- **Date of Valuation** (required): Date picker field
+
+**Founder Information (up to 4 founders):**
+- **Founder Email** (required): Email input field
+- **Founder Role** (required): Text input field
+
+##### Auto-Extracted Fields (from SHA Document)
+- **Company Name**: Extracted automatically from SHA
+- **Founder Names (1-4)**: Extracted automatically from SHA
+- **Address**: Extracted automatically from SHA
+- **Date of Signing SHA**: Extracted automatically from SHA
+- **Funding TAT**: Extracted automatically from SHA
+
+##### Action Buttons
+
+- **Onboard Button**: Primary action button (dark background)
+- **Cancel Button**: Secondary action button
+
+#### Enhanced Portfolio Document Organization
+- **Document Linking**: Automatic association of SHA documents with portfolio companies
+- **Document Repository Integration**: Seamless storage and retrieval of company documents
+- **Search and Filter**: Enhanced search capabilities across portfolio companies
+
 ---
 
 ### Use Case

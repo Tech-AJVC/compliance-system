@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-reminder-service
+  namespace: default
+spec:
+  # Run every day at 9:30 AM IST (04:00 UTC) - adjust as needed
+  schedule: "0 4 * * *"
+  
+  # Keep last 3 successful jobs and 2 failed jobs for debugging
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  
+  # Don't start new job if previous one is still running
+  concurrencyPolicy: Forbid
+  
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: compliance-reminder-service
+            component: cron-job
+        spec:
+          restartPolicy: OnFailure
+          
+          containers:
+          - name: reminder-service
+            # Replace with your ECR registry URL
+            image: 148761677341.dkr.ecr.ap-south-1.amazonaws.com/compliance-reminder:latest
+            imagePullPolicy: Always
+            
+            env:
+            # Use the same database as your main app
+            - name: DATABASE_URL
+              value: "postgresql://postgres:your_db_password@compliance-db.c10u466skyz9.ap-south-1.rds.amazonaws.com:5432/compliance"
+            
+            # Gmail credentials path (using the same credentials as main app)
+            - name: GMAIL_CREDENTIALS_PATH
+              value: "/app/app/utils/neat-height-449308-h8-2a37363e5a04.json"
+            
+            # Application environment
+            - name: ENVIRONMENT
+              value: "production"
+            
+            # Logging level
+            - name: LOG_LEVEL
+              value: "INFO"
+            
+            # Resource limits - keep lightweight
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 256Mi
+          
+          # Don't restart the pod automatically - let CronJob handle it
+          terminationGracePeriodSeconds: 30
