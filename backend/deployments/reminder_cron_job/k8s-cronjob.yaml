@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   # Run every day at 9:30 AM IST (04:00 UTC) - adjust as needed
-  schedule: "0 4 * * *"
+  schedule: "2 17 * * *"
   
   # Keep last 3 successful jobs and 2 failed jobs for debugging
   successfulJobsHistoryLimit: 3
@@ -27,13 +27,13 @@ spec:
           containers:
           - name: reminder-service
             # Replace with your ECR registry URL
-            image: 148761677341.dkr.ecr.ap-south-1.amazonaws.com/compliance-reminder:latest
+            image: 148761677341.dkr.ecr.ap-south-1.amazonaws.com/prod/compliance-reminder-service:latest
             imagePullPolicy: Always
             
             env:
             # Use the same database as your main app
             - name: DATABASE_URL
-              value: "postgresql://postgres:your_db_password@compliance-db.c10u466skyz9.ap-south-1.rds.amazonaws.com:5432/compliance"
+              value: "postgresql://vccrm:vccrm$246@compliance-db.c10u466skyz9.ap-south-1.rds.amazonaws.com:5432/vccrm"
             
             # Gmail credentials path (using the same credentials as main app)
             - name: GMAIL_CREDENTIALS_PATH

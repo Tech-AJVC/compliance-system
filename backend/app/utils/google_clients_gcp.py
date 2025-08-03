@@ -108,7 +108,15 @@ def gmail_send_email(subject_email: str, recipient_email: str, subject: str, bod
     creds = get_credentials(subject_email)
     service = build("gmail", "v1", credentials=creds)
     message = EmailMessage()
-    message.set_content(body)
+    
+    # Detect if content is HTML and set appropriate content type
+    if body.strip().startswith('<html>') or '<div' in body or '<table' in body or '<!DOCTYPE html>' in body:
+        # Set HTML content
+        message.set_content(body, subtype='html')
+    else:
+        # Set plain text content
+        message.set_content(body)
+    
     message["To"] = recipient_email
     message["From"] = subject_email
     message["Subject"] = subject
