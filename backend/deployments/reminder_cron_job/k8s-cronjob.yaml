@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   # Run every day at 9:30 AM IST (04:00 UTC) - adjust as needed
-  schedule: "2 17 * * *"
+  schedule: "0 4 * * *"
   
   # Keep last 3 successful jobs and 2 failed jobs for debugging
   successfulJobsHistoryLimit: 3
