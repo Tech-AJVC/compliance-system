@@ -9,9 +9,9 @@ from typing import List, Dict, Optional, Any
 from botocore.exceptions import ClientError, NoCredentialsError
 from datetime import datetime
 import mimetypes
-from dotenv import load_dotenv, find_dotenv
-# Load environment variables
-load_dotenv()
+# from dotenv import load_dotenv, find_dotenv
+# # Load environment variables
+# load_dotenv()
 
 
 logger = logging.getLogger(__name__)
@@ -36,12 +36,12 @@ class S3DocumentStorage:
             raise ValueError("S3 bucket name must be provided either as parameter or S3_BUCKET_NAME environment variable")
         
         try:
-            # Initialize S3 client
+            # Initialize S3 client - let boto3 use default credential chain (IRSA, env vars, etc.)
             self.s3_client = boto3.client(
                 's3',
                 region_name=self.region_name,
-                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+                # aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                # aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
             )
             
             # Test connection
