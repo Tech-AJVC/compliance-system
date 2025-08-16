@@ -13,6 +13,7 @@ import uuid
 from ..database.base import get_db
 from ..auth.security import get_current_user
 from ..models import LPDrawdown, DrawdownNotice, LPDetails, FundDetails, Document
+from ..models.lp_drawdowns import DrawdownNoticeStatus
 from ..schemas.drawdown import (
     DrawdownGenerateRequest, DrawdownGenerateResponse,
     DrawdownPreviewRequest, DrawdownPreviewResponse, LPDrawdownPreview,
@@ -140,7 +141,7 @@ def generate_drawdowns(
                 remaining_commitment=amounts['remaining_commitment'],
                 forecast_next_quarter=request.forecast_next_quarter,
                 forecast_next_quarter_period=forecast_next_quarter_period,
-                status="Sent"
+                status=DrawdownNoticeStatus.DRAWDOWN_PAYMENT_PENDING.value
             )
             
             db.add(drawdown)
@@ -232,7 +233,7 @@ def generate_drawdowns(
                     amount_due=amounts['drawdown_amount'],
                     due_date=request.due_date,
                     pdf_file_path=s3_url or pdf_path,  # Use S3 URL if available, otherwise local path
-                    status='Generated'
+                    status=DrawdownNoticeStatus.DRAWDOWN_PAYMENT_PENDING.value
                 )
                 
                 db.add(notice)
@@ -246,7 +247,7 @@ def generate_drawdowns(
                     notice_date=request.notice_date,
                     amount_due=amounts['drawdown_amount'],
                     due_date=request.due_date,
-                    status='Failed'
+                    status=DrawdownNoticeStatus.DRAWDOWN_PAYMENT_PENDING.value  # Still set to pending even if PDF failed
                 )
                 db.add(notice)
             
@@ -531,9 +532,7 @@ def delete_drawdown(
                         # Parse S3 URL to get key
                         # Format: https://bucket.s3.region.amazonaws.com/key
                         url_parts = notice.pdf_file_path.split('/')
-                        logger.info(f"URL parts: {url_parts}")
                         s3_key = '/'.join(url_parts[3:])  # Everything after bucket/s3/region/
-                        logger.info(f"S3 key: {s3_key}")
                         delete_result = s3_storage.delete_object(s3_key)
                         if delete_result['success']:
                             deleted_files.append(s3_key)
@@ -625,10 +624,7 @@ def update_drawdown(
             raise HTTPException(status_code=404, detail=f"Drawdown {drawdown_id} not found")
         
         # Valid status values (only validate if status is being updated)
-        valid_statuses = [
-            "Sent", "Demat Pending", "Wire Pending", "Acceptance Pending", 
-            "Allotment Pending", "Allotment Done", "Cancelled"
-        ]
+        valid_statuses = [status.value for status in DrawdownNoticeStatus]
         
         # Track changes for response
         changes = {}

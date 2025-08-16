@@ -16,6 +16,29 @@ import mimetypes
 
 logger = logging.getLogger(__name__)
 
+def extract_s3_key_from_url(s3_url: str, bucket_name: str, region_name: str) -> str:
+    """
+    Extract S3 key from S3 URL
+    
+    Args:
+        s3_url: Full S3 URL
+        bucket_name: S3 bucket name
+        region_name: AWS region name
+        
+    Returns:
+        S3 key extracted from URL
+    """
+    # Handle both URL formats:
+    # https://bucket-name.s3.region.amazonaws.com/key
+    # https://s3.region.amazonaws.com/bucket-name/key
+    if f'{bucket_name}.s3.{region_name}.amazonaws.com/' in s3_url:
+        return s3_url.split(f'{bucket_name}.s3.{region_name}.amazonaws.com/')[-1]
+    elif f's3.{region_name}.amazonaws.com/{bucket_name}/' in s3_url:
+        return s3_url.split(f's3.{region_name}.amazonaws.com/{bucket_name}/')[-1]
+    else:
+        # Fallback: try to extract everything after the last occurrence of bucket name
+        return s3_url.split('/')[-1]
+
 class S3DocumentStorage:
     """
     S3 storage utility for uploading, downloading, and listing documents
@@ -247,6 +270,7 @@ class S3DocumentStorage:
                 'error': str(e)
             }
     
+
     def generate_presigned_url(self, s3_key: str, expiration: int = 3600) -> str:
         """
         Generate a presigned URL for temporary access to S3 object

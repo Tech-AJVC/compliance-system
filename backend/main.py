@@ -23,6 +23,7 @@ from app.api.funds import router as funds_router
 from app.api.fund_entities import router as fund_entities_router
 from app.api.portfolio import router as portfolio_router
 from app.api.drawdowns import router as drawdowns_router
+from app.api.unit_allotment import router as unit_allotment_router
 from app.utils.audit import log_activity
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
@@ -125,6 +126,7 @@ app.include_router(funds_router, prefix="/api", tags=["funds"])
 app.include_router(fund_entities_router, prefix="/api", tags=["fund-entities"])
 app.include_router(portfolio_router, prefix="/api/portfolio-companies", tags=["portfolio"])
 app.include_router(drawdowns_router, prefix="/api/drawdowns", tags=["drawdowns"])
+app.include_router(unit_allotment_router, prefix="/api", tags=["unit-allotment"])
 
 # Create uploads directory if it doesn't exist
 os.makedirs("uploads", exist_ok=True)

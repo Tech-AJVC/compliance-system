@@ -1,9 +1,17 @@
-from sqlalchemy import Column, String, Date, Numeric, ForeignKey, Text, DateTime, text, Integer
+from sqlalchemy import Column, String, Date, Numeric, ForeignKey, Text, DateTime, text, Integer, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ..database.base import Base
 import uuid
+import enum
 from datetime import datetime
+
+class DrawdownNoticeStatus(str, enum.Enum):
+    """Enum for drawdown notice status values"""
+    DRAWDOWN_PAYMENT_PENDING = "Drawdown Payment Pending"
+    ALLOTMENT_SHEET_GENERATION_PENDING = "Allotment Sheet Generation Pending"
+    ALLOTMENT_PENDING = "Allotment Pending"
+    ALLOTMENT_DONE = "Allotment Done"
 
 class LPDrawdown(Base):
     __tablename__ = "lp_drawdowns"
@@ -29,7 +37,7 @@ class LPDrawdown(Base):
     forecast_next_quarter_period = Column(String(20), nullable=False)  # e.g., "Q2'25 Jul-Sep"
     
     # Status tracking
-    status = Column(String(50), nullable=False, default="Sent")  # Sent, Demat Pending, Wire Pending, etc.
+    status = Column(String(50), nullable=False, default=DrawdownNoticeStatus.DRAWDOWN_PAYMENT_PENDING.value)  # Starts with payment pending
     
     # Payment tracking
     payment_received_date = Column(Date, nullable=True)
@@ -48,10 +56,19 @@ class LPDrawdown(Base):
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
 
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint(
+            status.in_([status.value for status in DrawdownNoticeStatus]),
+            name='valid_lp_drawdown_status'
+        ),
+    )
+
     # Relationships
     fund = relationship("FundDetails", back_populates="lp_drawdowns")
     lp = relationship("LPDetails", back_populates="drawdowns")
     drawdown_notices = relationship("DrawdownNotice", back_populates="drawdown")
+    unit_allotments = relationship("UnitAllotment", back_populates="drawdown")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -76,13 +93,21 @@ class DrawdownNotice(Base):
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.document_id"), nullable=True)
     
     # Delivery status
-    status = Column(String(30), nullable=False, default='Generated')  # Generated, Sent, Failed, Viewed
+    status = Column(String(40), nullable=False, default=DrawdownNoticeStatus.DRAWDOWN_PAYMENT_PENDING.value)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     delivery_channel = Column(String(30), nullable=True, default='email')
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
     updated_at = Column(DateTime(timezone=True), server_default=text('now()'), onupdate=datetime.now)
+
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint(
+            status.in_([status.value for status in DrawdownNoticeStatus]),
+            name='valid_drawdown_notice_status'
+        ),
+    )
 
     # Relationships
     drawdown = relationship("LPDrawdown", back_populates="drawdown_notices")
