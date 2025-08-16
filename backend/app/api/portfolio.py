@@ -84,7 +84,7 @@ def validate_portfolio_uniqueness(db: Session, portfolio_data: PortfolioOnboardi
     # Check founder emails
     if portfolio_data.founders:
         for founder_name, founder_info in portfolio_data.founders.items():
-            founder_email = founder_info.get("email")
+            founder_email = founder_info.email  # FounderInfo is a Pydantic model, not dict
             if founder_email:
                 existing_founder = db.query(PortfolioFounder).filter(
                     PortfolioFounder.founder_email == founder_email

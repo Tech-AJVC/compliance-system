@@ -29,7 +29,9 @@ class FundDetails(Base):
     
     # Scheme details - now compulsory
     scheme_pan = Column(String(20), nullable=False)  # duplicate of aif_pan but kept for template parity
-    nav = Column(Integer, nullable=False)
+    nav = Column(Integer, nullable=False, default=100)  # NAV per unit (typically 100)
+    mgmt_fee_rate = Column(DECIMAL(5,4), nullable=False, default=0.01)  # 1% management fee rate
+    stamp_duty_rate = Column(DECIMAL(8,7), nullable=False, default=0.00005)  # 0.005% stamp duty rate
     target_fund_size = Column(DECIMAL(18,2), nullable=False)
     
     # Important dates - now compulsory
@@ -85,4 +87,5 @@ class FundDetails(Base):
     # Relationships
     fund_entities = relationship("FundEntity", back_populates="fund")
     lp_details = relationship("LPDetails", back_populates="fund")
-    lp_drawdowns = relationship("LPDrawdown", back_populates="fund") 
+    lp_drawdowns = relationship("LPDrawdown", back_populates="fund")
+    unit_allotments = relationship("UnitAllotment", back_populates="fund") 

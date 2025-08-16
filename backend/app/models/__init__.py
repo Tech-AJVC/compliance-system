@@ -3,12 +3,13 @@ from .compliance_task import ComplianceTask
 from .document import Document
 from .lp_details import LPDetails
 from .lp_document import LPDocument
-from .lp_drawdowns import LPDrawdown, DrawdownNotice
+from .lp_drawdowns import LPDrawdown, DrawdownNotice, DrawdownNoticeStatus
 from .compliance_records import ComplianceRecord
 from .audit_log import AuditLog
 from .entity import Entity
 from .fund_details import FundDetails
 from .fund_entity import FundEntity
+from .unit_allotment import UnitAllotment
 from .portfolio_company import PortfolioCompany
 from .portfolio_founder import PortfolioFounder
 from .portfolio_investment import PortfolioInvestment
@@ -22,11 +23,13 @@ __all__ = [
     "LPDocument",
     "LPDrawdown",
     "DrawdownNotice",
+    "DrawdownNoticeStatus",
     "ComplianceRecord",
     "AuditLog",
     "Entity",
     "FundDetails",
     "FundEntity",
+    "UnitAllotment",
     "PortfolioCompany",
     "PortfolioFounder", 
     "PortfolioInvestment",
