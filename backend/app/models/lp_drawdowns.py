@@ -69,6 +69,7 @@ class LPDrawdown(Base):
     lp = relationship("LPDetails", back_populates="drawdowns")
     drawdown_notices = relationship("DrawdownNotice", back_populates="drawdown")
     unit_allotments = relationship("UnitAllotment", back_populates="drawdown")
+    payments = relationship("LPPayment", back_populates="drawdown")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

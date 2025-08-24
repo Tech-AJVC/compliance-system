@@ -88,4 +88,6 @@ class FundDetails(Base):
     fund_entities = relationship("FundEntity", back_populates="fund")
     lp_details = relationship("LPDetails", back_populates="fund")
     lp_drawdowns = relationship("LPDrawdown", back_populates="fund")
-    unit_allotments = relationship("UnitAllotment", back_populates="fund") 
+    unit_allotments = relationship("UnitAllotment", back_populates="fund")
+    lp_payments = relationship("LPPayment", back_populates="fund")
+    payment_reconciliations = relationship("PaymentReconciliation", back_populates="fund") 

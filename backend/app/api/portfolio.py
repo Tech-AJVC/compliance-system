@@ -317,7 +317,8 @@ async def onboard_portfolio_company(
 async def get_portfolio_companies(
     skip: int = Query(0, description="Number of records to skip for pagination"),
     limit: int = Query(100, description="Maximum number of records to return"),
-    sector: Optional[str] = Query(None, description="Filter by sector"),
+    sector: Optional[str] = Query(None, description="Filter by sector (checks if sector array contains this value)"),
+    subsector: Optional[str] = Query(None, description="Filter by subsector (checks if subsector array contains this value)"),
     db: Session = Depends(get_db)
 ):
     """Get all portfolio companies with pagination and optional filtering."""
@@ -326,7 +327,10 @@ async def get_portfolio_companies(
     
     # Apply filters
     if sector:
-        query = query.filter(PortfolioCompany.sector == sector)
+        query = query.filter(PortfolioCompany.sector.any(sector))
+    
+    if subsector:
+        query = query.filter(PortfolioCompany.subsector.any(subsector))
     
     # Get total count
     total = query.count()
@@ -339,7 +343,8 @@ async def get_portfolio_companies(
 @router.get("/search", response_model=PortfolioCompanyListResponse)
 async def search_portfolio_companies(
     query: Optional[str] = Query(None, description="Search query for company name or startup brand"),
-    sector: Optional[str] = Query(None, description="Filter by sector"),
+    sector: Optional[str] = Query(None, description="Filter by sector (checks if sector array contains this value)"),
+    subsector: Optional[str] = Query(None, description="Filter by subsector (checks if subsector array contains this value)"),
     product_description: Optional[str] = Query(None, description="Search in product description"),
     registered_address: Optional[str] = Query(None, description="Search in registered address"),
     skip: int = Query(0, description="Number of records to skip for pagination"),
@@ -351,7 +356,8 @@ async def search_portfolio_companies(
     
     Supports:
     - Full text search across company_name and startup_brand
-    - Exact match filtering by sector
+    - Array filtering by sector (checks if sector array contains the value)
+    - Array filtering by subsector (checks if subsector array contains the value)
     - Partial text search in product_description and registered_address
     
     All search parameters are optional and can be combined.
@@ -367,9 +373,13 @@ async def search_portfolio_companies(
         )
         base_query = base_query.filter(search_filter)
     
-    # Apply sector filter (exact match)
+    # Apply sector filter (array contains)
     if sector:
-        base_query = base_query.filter(PortfolioCompany.sector == sector)
+        base_query = base_query.filter(PortfolioCompany.sector.any(sector))
+    
+    # Apply subsector filter (array contains)
+    if subsector:
+        base_query = base_query.filter(PortfolioCompany.subsector.any(subsector))
     
     # Apply product description search
     if product_description:

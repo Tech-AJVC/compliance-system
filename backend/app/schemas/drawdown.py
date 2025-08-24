@@ -132,6 +132,7 @@ class DrawdownPreviewResponse(BaseModel):
     total_drawdown_amount: Decimal
     lp_previews: List[LPDrawdownPreview]
     summary: dict
+    sample_html_preview: Optional[str] = Field(None, description="HTML preview of capital call notice for first LP")
 
 class DrawdownGenerateResponse(BaseModel):
     """Response schema for drawdown generation"""

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Securi
 from sqlalchemy.orm import Session
 from app.database.base import get_db
 from app.models.user import User
-from app.models.compliance_task import ComplianceTask, TaskState, TaskCategory
+from app.models.compliance_task import ComplianceTask, TaskState, TaskCategory, TaskProcess
 from app.models.document import Document, TaskDocument
 from app.auth.security import get_password_hash, verify_password, create_access_token, get_current_user, check_role
 from app.schemas.compliance_task import (
@@ -11,6 +11,7 @@ from app.schemas.compliance_task import (
     ComplianceTaskUpdate,
     TaskState,
     TaskCategory,
+    TaskProcess,
     ComplianceTaskList
 )
 from app.api.documents import router as documents_router
@@ -24,6 +25,7 @@ from app.api.fund_entities import router as fund_entities_router
 from app.api.portfolio import router as portfolio_router
 from app.api.drawdowns import router as drawdowns_router
 from app.api.unit_allotment import router as unit_allotment_router
+from app.api.payment_reconciliation import router as payment_reconciliation_router
 from app.utils.audit import log_activity
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
@@ -127,6 +129,7 @@ app.include_router(fund_entities_router, prefix="/api", tags=["fund-entities"])
 app.include_router(portfolio_router, prefix="/api/portfolio-companies", tags=["portfolio"])
 app.include_router(drawdowns_router, prefix="/api/drawdowns", tags=["drawdowns"])
 app.include_router(unit_allotment_router, prefix="/api", tags=["unit-allotment"])
+app.include_router(payment_reconciliation_router, prefix="/api/payment-reconciliations", tags=["payment-reconciliation"])
 
 # Create uploads directory if it doesn't exist
 os.makedirs("uploads", exist_ok=True)
@@ -510,6 +513,7 @@ async def create_task(
 async def get_tasks(
         state: Optional[str] = None,
         category: Optional[str] = None,
+        process: Optional[str] = None,
         assignee_id: Optional[uuid.UUID] = None,
         assignee_name: Optional[str] = None,
         reviewer_id: Optional[uuid.UUID] = None,
@@ -528,6 +532,7 @@ async def get_tasks(
     Get tasks with optional filtering and sorting:
     - Filter by task state
     - Filter by task category
+    - Filter by task process
     - Filter by assignee_id
     - Filter by assignee_name (partial match)
     - Filter by deadline date range (start_date to end_date)
@@ -548,6 +553,9 @@ async def get_tasks(
 
     if category:
         query = query.filter(ComplianceTask.category == category)
+    
+    if process:
+        query = query.filter(ComplianceTask.process == process)
 
     if assignee_id:
         query = query.filter(ComplianceTask.assignee_id == assignee_id)
@@ -693,6 +701,7 @@ async def search_tasks_by_description(
         description: str = Query(..., description="Search term for task description"),
         state: Optional[str] = None,
         category: Optional[str] = None,
+        process: Optional[str] = None,
         assignee_id: Optional[uuid.UUID] = None,
         assignee_name: Optional[str] = None,
         reviewer_id: Optional[uuid.UUID] = None,
@@ -739,6 +748,9 @@ async def search_tasks_by_description(
     
     if category:
         query = query.filter(ComplianceTask.category == category)
+    
+    if process:
+        query = query.filter(ComplianceTask.process == process)
     
     if assignee_id:
         query = query.filter(ComplianceTask.assignee_id == assignee_id)

@@ -12,7 +12,7 @@ import uuid
 
 from ..database.base import get_db
 from ..auth.security import get_current_user
-from ..models import LPDrawdown, DrawdownNotice, LPDetails, FundDetails, Document
+from ..models import LPDrawdown, DrawdownNotice, LPDetails, FundDetails, Document, LPPayment
 from ..models.lp_drawdowns import DrawdownNoticeStatus
 from ..schemas.drawdown import (
     DrawdownGenerateRequest, DrawdownGenerateResponse,
@@ -20,7 +20,7 @@ from ..schemas.drawdown import (
     DrawdownStatusUpdateRequest, DrawdownUpdateRequest, LPDrawdownResponse, DrawdownNoticeResponse,
     DrawdownWithBankDetails, DrawdownListResponse, DrawdownSummaryResponse
 )
-from ..utils.capital_call_generator.capital_call_html_generator import generate_capital_call_pdf
+from ..utils.capital_call_generator.capital_call_html_generator import generate_capital_call_pdf, CapitalCallHTMLGenerator
 from ..utils.s3_storage import get_s3_storage
 
 router = APIRouter()
@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
 
 def calculate_quarter_string(notice_date: date) -> str:
     """Calculate quarter string from notice date"""
-    quarter_map = {1: "Q1", 2: "Q1", 3: "Q1", 4: "Q2", 5: "Q2", 6: "Q2",
-                   7: "Q3", 8: "Q3", 9: "Q3", 10: "Q4", 11: "Q4", 12: "Q4"}
+    # Fiscal year quarters: Q1 (Apr-Jun), Q2 (Jul-Sep), Q3 (Oct-Dec), Q4 (Jan-Mar)
+    quarter_map = {1: "Q4", 2: "Q4", 3: "Q4", 4: "Q1", 5: "Q1", 6: "Q1",
+                   7: "Q2", 8: "Q2", 9: "Q2", 10: "Q3", 11: "Q3", 12: "Q3"}
     quarter = quarter_map[notice_date.month]
     year_short = str(notice_date.year)[2:]
     return f"{quarter}'{year_short}"
@@ -331,11 +332,51 @@ def preview_drawdowns(
             "average_drawdown": float(total_amount / len(lps)) if lps else 0
         }
         
+        # Generate HTML preview for the first LP
+        sample_html_preview = None
+        if lps and lp_previews:
+            try:
+                # Calculate quarter string and next quarter period
+                drawdown_quarter = calculate_quarter_string(request.notice_date)
+                forecast_next_quarter_period = calculate_next_quarter_period(drawdown_quarter)
+                
+                # Get first LP and its amounts
+                first_lp = lps[0]
+                first_amounts = calculate_drawdown_amounts(first_lp, request.percentage_drawdown, db)
+                
+                # Prepare data for HTML generation (same as in generate_drawdowns)
+                html_data = {
+                    'notice_date': request.notice_date.strftime('%Y-%m-%d'),
+                    'investor': first_lp.lp_name,
+                    'amount_due': float(first_amounts['drawdown_amount']),
+                    'total_commitment': float(first_amounts['committed_amt']),
+                    'amount_called_up': float(first_amounts['amount_called_up']),
+                    'remaining_commitment': float(first_amounts['remaining_commitment']),
+                    'contribution_due_date': request.due_date.strftime('%Y-%m-%d'),
+                    'bank_name': fund.bank_name or "Bank Name Not Set",
+                    'ifsc': fund.bank_ifsc or "IFSC Not Set",
+                    'acct_name': fund.bank_account_name or "Account Name Not Set",
+                    'acct_number': fund.bank_account_no or "Account Number Not Set",
+                    'bank_contact': fund.bank_contact_person or "Contact Not Set",
+                    'phone': fund.bank_contact_phone or "Phone Not Set",
+                    'forecast_next_quarter': float(request.forecast_next_quarter),
+                    'forecast_next_quarter_period': forecast_next_quarter_period
+                }
+                
+                # Generate HTML using the HTML generator
+                html_generator = CapitalCallHTMLGenerator()
+                sample_html_preview = html_generator.generate_html(html_data)
+                
+            except Exception as e:
+                logger.warning(f"Failed to generate HTML preview: {str(e)}")
+                sample_html_preview = None
+        
         return DrawdownPreviewResponse(
             preview_id=preview_id,
             total_drawdown_amount=total_amount,
             lp_previews=lp_previews,
-            summary=summary
+            summary=summary,
+            sample_html_preview=sample_html_preview
         )
         
     except HTTPException:
@@ -558,18 +599,27 @@ def delete_drawdown(
                     if document:
                         db.delete(document)
         
+        # Delete all LP payments associated with this drawdown
+        lp_payments = db.query(LPPayment).filter(LPPayment.drawdown_id == drawdown_id).all()
+        deleted_payments_count = len(lp_payments)
+        
+        for lp_payment in lp_payments:
+            logger.info(f"Deleting LP payment {lp_payment.lp_payment_id} for drawdown {drawdown_id}")
+            db.delete(lp_payment)
+        
         # Delete the drawdown itself
         db.delete(drawdown)
         
         # Commit all deletions
         db.commit()
         
-        logger.info(f"Successfully deleted drawdown {drawdown_id} with {len(notices)} notices")
+        logger.info(f"Successfully deleted drawdown {drawdown_id} with {len(notices)} notices and {deleted_payments_count} LP payments")
         
         return {
             "success": True,
             "message": f"Drawdown {drawdown_id} and associated records deleted successfully",
             "deleted_notices": len(notices),
+            "deleted_lp_payments": deleted_payments_count,
             "deleted_s3_files": len(deleted_files),
             "failed_s3_deletions": len(failed_deletions),
             "s3_files_deleted": deleted_files,

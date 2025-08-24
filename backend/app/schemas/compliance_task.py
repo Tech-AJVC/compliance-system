@@ -20,6 +20,20 @@ class TaskCategory(str, Enum):
     MCA = "MCA"
     OTHER = "Other"
 
+
+class TaskProcess(str, Enum):
+    LP_ONBOARDING = "LP Onboarding"
+    DRAWDOWN = "Drawdown"
+    UNIT_ALLOTMENT = "Unit Allotment"
+    INVI_FILING = "invi Filing"
+    PORTFOLIO_ONBOARDING = "Portfolio Onboarding"
+    ENTITY_ONBOARDING = "Entity Onboarding"
+    SEBI_ACTIVITY_REPORT = "SEBI Activity Report"
+    FUND_REGISTRATION = "Fund Registration"
+    MONTHLY_IT_GST_FILINGS = "Monthly IT/GST Filings"
+    ANNUAL_IT_GST_FILINGS = "Annual IT/GST Filings"
+    ANNUAL_MCA_FILINGS = "Annual MCA Filings"
+
 class DocumentInfo(BaseModel):
     document_id: UUID4
     name: str
@@ -34,6 +48,7 @@ class ComplianceTaskBase(BaseModel):
     description: str
     deadline: datetime
     category: TaskCategory
+    process: Optional[TaskProcess] = None
     assignee_id: UUID4
     reviewer_id: Optional[UUID4] = None
     approver_id: Optional[UUID4] = None
@@ -50,6 +65,7 @@ class ComplianceTaskUpdate(BaseModel):
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     category: Optional[TaskCategory] = None
+    process: Optional[TaskProcess] = None
     assignee_id: Optional[UUID4] = None
     reviewer_id: Optional[UUID4] = None
     approver_id: Optional[UUID4] = None

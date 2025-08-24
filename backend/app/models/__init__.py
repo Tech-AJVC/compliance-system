@@ -1,9 +1,11 @@
 from .user import User
-from .compliance_task import ComplianceTask
+from .compliance_task import ComplianceTask, TaskProcess, TaskCategory, TaskState
 from .document import Document
 from .lp_details import LPDetails
 from .lp_document import LPDocument
 from .lp_drawdowns import LPDrawdown, DrawdownNotice, DrawdownNoticeStatus
+from .lp_payment import LPPayment, LPPaymentStatus
+from .payment_reconciliation import PaymentReconciliation, PaymentReconciliationStatus
 from .compliance_records import ComplianceRecord
 from .audit_log import AuditLog
 from .entity import Entity
@@ -17,13 +19,20 @@ from .portfolio_document import PortfolioDocument
 
 __all__ = [
     "User",
-    "ComplianceTask", 
+    "ComplianceTask",
+    "TaskProcess",
+    "TaskCategory", 
+    "TaskState",
     "Document",
     "LPDetails",
     "LPDocument",
     "LPDrawdown",
     "DrawdownNotice",
     "DrawdownNoticeStatus",
+    "LPPayment",
+    "LPPaymentStatus",
+    "PaymentReconciliation",
+    "PaymentReconciliationStatus",
     "ComplianceRecord",
     "AuditLog",
     "Entity",

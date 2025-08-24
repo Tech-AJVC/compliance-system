@@ -21,6 +21,19 @@ class TaskCategory(str, enum.Enum):
     MCA = "MCA"
     OTHER = "Other"
 
+class TaskProcess(str, enum.Enum):
+    LP_ONBOARDING = "LP Onboarding"
+    DRAWDOWN = "Drawdown"
+    UNIT_ALLOTMENT = "Unit Allotment"
+    INVI_FILING = "invi Filing"
+    PORTFOLIO_ONBOARDING = "Portfolio Onboarding"
+    ENTITY_ONBOARDING = "Entity Onboarding"
+    SEBI_ACTIVITY_REPORT = "SEBI Activity Report"
+    FUND_REGISTRATION = "Fund Registration"
+    MONTHLY_IT_GST_FILINGS = "Monthly IT/GST Filings"
+    ANNUAL_IT_GST_FILINGS = "Annual IT/GST Filings"
+    ANNUAL_MCA_FILINGS = "Annual MCA Filings"
+
 class ComplianceTask(Base):
     __tablename__ = "compliance_tasks"
 
@@ -31,6 +44,7 @@ class ComplianceTask(Base):
     dependent_task_id = Column(UUID(as_uuid=True), ForeignKey('compliance_tasks.compliance_task_id'), nullable=True)
     state = Column(String, nullable=False, server_default=TaskState.OPEN.value)
     category = Column(String, nullable=False)
+    process = Column(String, nullable=True)  # New process field
     assignee_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=False)
     reviewer_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=True)
     approver_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=True)
@@ -63,3 +77,11 @@ class ComplianceTask(Base):
     @task_category.setter
     def task_category(self, value: TaskCategory):
         self.category = value.value
+
+    @property
+    def task_process(self) -> TaskProcess:
+        return TaskProcess(self.process) if self.process else None
+
+    @task_process.setter
+    def task_process(self, value: TaskProcess):
+        self.process = value.value if value else None
