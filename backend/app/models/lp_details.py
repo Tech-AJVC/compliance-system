@@ -42,6 +42,7 @@ class LPDetails(Base):
     lp_documents = relationship("LPDocument", back_populates="lp")
     compliance_records = relationship("ComplianceRecord", back_populates="lp")
     unit_allotments = relationship("UnitAllotment", back_populates="lp")
+    payments = relationship("LPPayment", back_populates="lp")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

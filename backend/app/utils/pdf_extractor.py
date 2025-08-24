@@ -64,6 +64,9 @@ from threading import Lock
 from mistralai import Mistral, DocumentURLChunk
 import tempfile
 
+from dotenv import load_dotenv
+load_dotenv()
+
 
 class MistralOCRManager:
     """
@@ -634,7 +637,56 @@ if __name__ == "__main__":
         print(f"📊 Memory stats: {stats}")
         
         # You can uncomment the line below to run the example with a real PDF
-        # example_usage() 
+        # example_usage()
+        
+    # Simple PDF test script with command line arguments
+    import sys
+    
+    print("\n" + "=" * 50)
+    print("PDF Text Extraction Test")
+    print("=" * 50)
+    
+    # Parse command line arguments
+    if len(sys.argv) < 2:
+        print("Usage: python pdf_extractor.py <pdf_path> [page_range]")
+        print("Examples:")
+        print("  python pdf_extractor.py document.pdf")
+        print("  python pdf_extractor.py document.pdf '0-2'")
+        print("  python pdf_extractor.py document.pdf '0,2,4'")
+        print("No PDF path provided. Skipping test.")
+    else:
+        pdf_path = sys.argv[1]
+        page_range = sys.argv[2] if len(sys.argv) > 2 else None
+        
+        try:
+            print(f"\n🔄 Processing PDF: {pdf_path}")
+            if page_range:
+                print(f"📄 Page range: {page_range}")
+            else:
+                print("📄 Processing all pages")
+            
+            # Extract text
+            text, metadata, images = extract_text_from_pdf(pdf_path, page_range)
+            
+            print(f"\n✅ Extraction completed successfully!")
+            print(f"📊 Pages processed: {metadata['pages_processed']}")
+            print(f"📊 Total characters: {metadata['character_count']}")
+            print(f"📊 Images found: {metadata['image_count']}")
+            
+            print(f"\n📝 Extracted text:")
+            print("-" * 40)
+            print(text)
+            print("-" * 40)
+            
+        except FileNotFoundError:
+            print(f"❌ Error: PDF file not found at {pdf_path}")
+        except Exception as e:
+            print(f"❌ Error extracting text: {str(e)}")
+        
+        finally:
+            # Cleanup after test
+            cleanup_mistral_cache()
+            print("\n🧹 Cache cleaned up") 
 
 
 def get_images_by_page(images: Dict[str, Any], page_index: int) -> List[Dict[str, Any]]:

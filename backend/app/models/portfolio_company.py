@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Numeric
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 from datetime import datetime
@@ -12,7 +12,8 @@ class PortfolioCompany(Base):
     company_id = Column(Integer, primary_key=True, autoincrement=True)
     startup_brand = Column(String(255), nullable=False, unique=True)
     company_name = Column(String(255), nullable=False, unique=True)
-    sector = Column(String(100), nullable=True)
+    sector = Column(ARRAY(String(100)), nullable=True)
+    subsector = Column(ARRAY(String(100)), nullable=True)
     product_description = Column(Text, nullable=True)
     registered_address = Column(Text, nullable=True)
     pan = Column(String(20), nullable=True)

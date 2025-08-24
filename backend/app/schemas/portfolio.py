@@ -10,7 +10,8 @@ from pydantic import ConfigDict
 class PortfolioCompanyBase(BaseModel):
     startup_brand: str
     company_name: Optional[str] = None  # Will be extracted from SHA
-    sector: Optional[str] = None
+    sector: Optional[List[str]] = None
+    subsector: Optional[List[str]] = None
     product_description: Optional[str] = None
     registered_address: Optional[str] = None  # Will be extracted from SHA
     pan: Optional[str] = None
@@ -22,7 +23,8 @@ class PortfolioCompanyCreate(PortfolioCompanyBase):
 class PortfolioCompanyUpdate(BaseModel):
     startup_brand: Optional[str] = None
     company_name: Optional[str] = None
-    sector: Optional[str] = None
+    sector: Optional[List[str]] = None
+    subsector: Optional[List[str]] = None
     product_description: Optional[str] = None
     registered_address: Optional[str] = None
     pan: Optional[str] = None
@@ -132,7 +134,8 @@ class PortfolioOnboardingInput(BaseModel):
     
     # Company Information (from UI)
     startup_brand: str = Field(..., description="Brand/startup name of the company")
-    sector: Optional[str] = Field(None, description="Business sector (e.g., Consumer, Technology)")
+    sector: Optional[List[str]] = Field(None, description="Business sectors (e.g., ['Consumer', 'Technology'])")
+    subsector: Optional[List[str]] = Field(None, description="Business subsectors (e.g., ['E-commerce', 'SaaS'])")
     pan: Optional[str] = Field(None, description="PAN number of the company")
     isin: Optional[str] = Field(None, description="ISIN number of the company")
     product_description: Optional[str] = Field(None, description="Description of the company's product/service")
@@ -160,7 +163,8 @@ class PortfolioOnboardingInput(BaseModel):
         json_schema_extra={
             "example": {
                 "startup_brand": "Yinara",
-                "sector": "Consumer",
+                "sector": ["Consumer", "Luxury"],
+                "subsector": ["Jewelry", "E-commerce"],
                 "pan": "AAACY1234D",
                 "isin": "INE000123456",
                 "product_description": "Luxury jewellery brand",
